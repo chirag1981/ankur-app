@@ -1,86 +1,38 @@
-# 📱 Quick Vendor Invoice (Flutter & Material 3)
+# Invisible Grills — Estimation, Quotation & Invoice App
 
-A lightning-fast, modern, mobile Point-of-Sale (POS) & Invoice Billing app designed specifically for shopkeepers and food vendors (e.g. Frankie stall, Fast Food, Kirana, Retail).
-
-Built with **Flutter 3.x**, **Dart 3.x**, **Riverpod**, **Material 3**, and **SQLite (sqflite)**, featuring 100% offline-first persistence, 80mm thermal receipt printing, PDF export, and 1-Click WhatsApp text receipt dispatch.
+A modern, offline-first mobile application built for the **Invisible Grills & Balcony Safety Solutions** business. Enables fast room-by-room window and balcony measurements, automatic unit conversion (inches to feet and sq. ft), automatic material computation, discount application, and instant PDF invoice/quotation sharing over WhatsApp.
 
 ---
 
-## ✨ Features & Capabilities
+## 🌟 Core Features
 
-- 🧾 **High-Speed POS Billing**: Quick category selector (FRANKIE, BEVERAGE, SNACKS, EXTRA) and instant-tap item grid with dynamic running cart total.
-- ➕ **Custom Line Item Override**: Add one-off items with custom names, prices, and quantities on the fly.
-- 💬 **1-Click WhatsApp Receipt**: Formats a clean, emoji-styled itemized bill text and opens WhatsApp directly for the customer's phone number.
-- 🖨️ **80mm Thermal Receipt & PDF Printing**: Generates standard thermal roll (80mm) slips and connects directly to Bluetooth, WiFi, or system printers via the `printing` package.
-- 🍔 **Menu Catalog Management**: Add, edit, toggle active status, and organize food items with categories and prices.
-- 📜 **Sales History & Analytics**: Real-time sales summary (Today's Sales, Today's Bills, Total Revenue), search past bills by customer name / invoice # / phone, and filter by date.
-- ⚙️ **Shop Profile Configuration**: Configure Shop Name, Phone, Address, UPI ID, Currency Symbol, Tax %, and custom receipt footer note.
-- 🔒 **100% Offline-First & Private**: Powered by local SQLite database. No external servers or cloud accounts required.
-
----
-
-## 🏗 Architecture (Feature-First Clean Architecture)
-
-```
-lib/
-├── app/
-│   ├── app.dart                    # MaterialApp with M3 ThemeData
-│   ├── main_nav_screen.dart        # Bottom Navigation Scaffold
-│   └── theme/                      # AppColors, AppTheme
-├── core/
-│   ├── database/                   # DatabaseHelper (SQLite, tables, pre-seeded data)
-│   ├── utils/                      # CurrencyUtils, WhatsAppFormatter, PdfInvoiceGenerator
-│   └── widgets/                    # Reusable widgets (ReceiptModal)
-├── features/
-│   ├── billing/                    # POS Billing screen, Cart & Checkout
-│   ├── catalog/                    # Food menu items & pricing management
-│   ├── history/                    # Sales summary KPIs & past invoices list
-│   ├── settings/                   # Shop name, phone, address, UPI ID & tax %
-│   └── providers.dart              # Riverpod state providers
-├── models/                         # CatalogItem, Invoice, InvoiceItem, ShopSettings, SalesSummary
-└── main.dart                       # App entrypoint with ProviderScope
-```
+- 📐 **Room & Measurement Hierarchy**:
+  - `Customer ➔ Rooms ➔ Windows / Grills ➔ Material & Labor Cost`
+  - Input width and height directly in **inches** — real-time automatic conversion to **feet** and **total square feet** `(W" × H") / 144 × Qty`.
+- 🔩 **Preconfigured Invisible Grills Materials**:
+  - **Channel**: Aluminium profile track channel (calculated automatically by total sq. ft).
+  - **Wire**: High-tensile marine grade SS 316 wire (calculated automatically by total sq. ft).
+  - **Bolt**: Anchor fasteners and expansion bolts (calculated per window/grill unit).
+  - **Chokdi**: Cross stiffeners and spacer chokdi clamps (calculated per window/grill unit).
+  - **Labor**: Professional fitting and installation labor (calculated automatically by total sq. ft).
+- 💰 **Flexible Pricing & Discounts**:
+  - Instant discount application in **Flat ₹** or **Percentage (%)**.
+  - Advance payment recording with automatic balance due calculation.
+  - Switch between **Quotation / Estimate** and **Tax Invoice** formats.
+- 📄 **Official PDF Generation & WhatsApp Sharing**:
+  - Itemized measurement schedule table + materials breakdown.
+  - Terms & conditions, business header, and signature sign-offs.
+  - Single-tap sharing directly to WhatsApp with customer greeting and formatted text summary.
+- 🔒 **100% Offline & Private**:
+  - Local SQLite storage (`invisible_grills.db`) with foreign-key cascade protection.
+  - Zero sensitive customer data sent to third-party servers.
 
 ---
 
-## 📲 How to Build the Android `.apk` via GitHub Actions (Recommended)
+## 🛠 Tech Stack
 
-1. **Push to GitHub**:
-   ```bash
-   git add .
-   git commit -m "feat: Flutter POS billing app with Clean Architecture & Riverpod"
-   git push origin master
-   ```
-
-2. **Download Your APK**:
-   - Go to your repository on GitHub.
-   - Click on the **Actions** tab.
-   - Click on the latest **"Build Flutter APK"** workflow run.
-   - Under **Artifacts** at the bottom of the page, download **`Quick-Vendor-Invoice-Flutter-APK`**.
-   - Install the APK on your Android phone!
-
----
-
-## 💻 Local Development & Build
-
-### Prerequisites:
-- **Flutter SDK 3.x+**
-- **Dart SDK 3.x+**
-- **Android Studio** or VS Code with Flutter extension
-- **Java 17+ / Android SDK**
-
-### Run Locally:
-```bash
-flutter pub get
-flutter run
-```
-
-### Build APK Locally:
-```bash
-# Debug APK
-flutter build apk --debug
-
-# Release APK
-flutter build apk --release
-```
-The output APK is generated at `build/app/outputs/flutter-apk/app-debug.apk`.
+- **Framework**: Flutter 3.29.x (Dart 3.7.x)
+- **Architecture**: Feature-First Clean Architecture + Flutter Riverpod
+- **Database**: SQLite via `sqflite` (relational models with foreign keys)
+- **PDF Engine**: `pdf` & `printing`
+- **Design System**: Material 3 with customized Slate & Emerald palette

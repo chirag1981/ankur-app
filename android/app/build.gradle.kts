@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.vendor.invoice.frankie_vendor"
+    namespace = "com.invisiblegrills.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,10 +15,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.vendor.invoice.frankie_vendor"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "com.invisiblegrills.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -34,7 +31,6 @@ android {
 
     buildTypes {
         release {
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -42,7 +38,7 @@ android {
     applicationVariants.all {
         outputs.all {
             val output = this as? com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            output?.outputFileName = "Frankie-Vendor-${name}.apk"
+            output?.outputFileName = "Invisible-Grills-${name}.apk"
         }
     }
 }

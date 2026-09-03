@@ -1,4 +1,4 @@
-package com.vendor.invoice.frankie_vendor
+package com.invisiblegrills.app
 
 import io.flutter.embedding.android.FlutterActivity
 

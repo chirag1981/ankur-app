@@ -1,30 +1,39 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Brand / Primary
-  static const Color primary = Color(0xFFE65100);       // Warm deep orange
-  static const Color primaryLight = Color(0xFFFF833A);
-  static const Color primaryDark = Color(0xFFAC1900);
+  AppColors._();
 
-  // Secondary / Accents
-  static const Color secondary = Color(0xFF2E7D32);     // Emerald green for cash/success
-  static const Color accent = Color(0xFF0288D1);        // Blue for UPI/share
-  static const Color warning = Color(0xFFF57C00);
-  static const Color error = Color(0xFFD32F2F);
+  // Primary palette: Deep Navy / Architectural Slate Blue
+  static const Color primary = Color(0xFF0F2744);
+  static const Color primaryLight = Color(0xFF1E3E62);
+  static const Color primaryDark = Color(0xFF071424);
 
-  // Light Theme Surfaces
-  static const Color lightBackground = Color(0xFFF5F6F9);
-  static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightSurfaceVariant = Color(0xFFEEEEEE);
-  static const Color lightText = Color(0xFF1E2022);
-  static const Color lightTextSecondary = Color(0xFF6C757D);
-  static const Color lightBorder = Color(0xFFE0E0E0);
+  // Accent / Cyan Window Glass tone
+  static const Color accent = Color(0xFF0284C7);
+  static const Color accentLight = Color(0xFF38BDF8);
+  static const Color accentGlow = Color(0xFFE0F2FE);
 
-  // Dark Theme Surfaces
-  static const Color darkBackground = Color(0xFF121418);
-  static const Color darkSurface = Color(0xFF1B1E23);
-  static const Color darkSurfaceVariant = Color(0xFF262A30);
-  static const Color darkText = Color(0xFFF1F3F5);
-  static const Color darkTextSecondary = Color(0xFF9AA0A6);
-  static const Color darkBorder = Color(0xFF2D3239);
+  // Emerald / Success for completed/paid
+  static const Color success = Color(0xFF059669);
+  static const Color successLight = Color(0xFFD1FAE5);
+
+  // Warning & Danger
+  static const Color warning = Color(0xFFD97706);
+  static const Color warningLight = Color(0xFFFEF3C7);
+  static const Color error = Color(0xFFDC2626);
+  static const Color errorLight = Color(0xFFFEE2E2);
+
+  // Neutrals - Light Surface
+  static const Color surfaceLight = Color(0xFFF8FAFC);
+  static const Color cardLight = Colors.white;
+  static const Color borderLight = Color(0xFFE2E8F0);
+  static const Color textDark = Color(0xFF0F172A);
+  static const Color textMuted = Color(0xFF64748B);
+
+  // Neutrals - Dark Surface
+  static const Color surfaceDark = Color(0xFF0B1120);
+  static const Color cardDark = Color(0xFF151E32);
+  static const Color borderDark = Color(0xFF24324D);
+  static const Color textWhite = Color(0xFFF8FAFC);
+  static const Color textMutedDark = Color(0xFF94A3B8);
 }

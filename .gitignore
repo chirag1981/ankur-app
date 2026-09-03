@@ -69,3 +69,9 @@ coverage/
 # Local database
 *.db
 *.sqlite3
+
+# Binaries & Archives
+*.apk
+*.aab
+*.zip
+.flutter-plugins-dependencies

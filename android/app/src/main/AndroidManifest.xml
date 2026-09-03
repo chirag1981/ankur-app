@@ -15,7 +15,7 @@
     </queries>
 
     <application
-        android:label="Quick Vendor Invoice"
+        android:label="Invisible Grills"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
