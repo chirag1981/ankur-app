@@ -16,7 +16,7 @@ class PdfInvoiceGenerator {
     final pdf = pw.Document();
 
     final dateFormat = DateFormat('dd MMM yyyy');
-    final invoiceNumber = 'ANK-${estimate.customer.id.toString().padLeft(4, '0')}';
+    final invoiceNumber = 'IG-${estimate.customer.id.toString().padLeft(4, '0')}';
     final docTitle = isInvoice ? 'TAX INVOICE' : 'QUOTATION / ESTIMATE';
 
     // Color Palette for PDF
