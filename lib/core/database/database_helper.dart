@@ -35,7 +35,8 @@ class DatabaseHelper {
         await db.execute('''
           UPDATE materials 
           SET unit = 'Ft', unit_price = 90.0, calculation_type = 'per_ft'
-          WHERE LOWER(name) = 'channel' AND (calculation_type = 'per_sq_ft' OR unit = 'Sq. Ft')
+          WHERE (LOWER(name) LIKE '%channel%' OR LOWER(category) = 'channel') 
+            AND (calculation_type = 'per_sq_ft' OR calculation_type = 'per_window' OR unit = 'Sq. Ft')
         ''');
 
         // Automatically ensure Wire is configured in Meters (Sq.Ft * 2.7)

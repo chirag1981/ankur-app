@@ -56,8 +56,12 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
     );
 
     _category = init?.category ?? 'Channel';
-    _calculationType = init?.calculationType ?? 'per_sq_ft';
-    _unit = init?.unit ?? 'Sq. Ft';
+    _calculationType = init?.calculationType ?? (_category == 'Channel' ? 'per_ft' : 'per_sq_ft');
+    _unit = init?.unit ?? (_category == 'Channel' ? 'Ft' : 'Sq. Ft');
+    if (_category == 'Channel' && (_calculationType == 'per_sq_ft' || _calculationType == 'per_window')) {
+      _calculationType = 'per_ft';
+      _unit = 'Ft';
+    }
     _isEnabled = init?.isEnabled ?? true;
   }
 
@@ -327,36 +331,47 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textMuted),
                 ),
                 const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ChoiceChip(
-                      label: const Text('Wire (Sq.Ft × 2.7m)'),
-                      selected: _calculationType == 'per_wire_meter',
-                      onSelected: (s) => _onCalcTypeChanged('per_wire_meter'),
-                    ),
-                    ChoiceChip(
-                      label: const Text('In Ft (Width × 2)'),
-                      selected: _calculationType == 'per_ft',
-                      onSelected: (s) => _onCalcTypeChanged('per_ft'),
-                    ),
-                    ChoiceChip(
-                      label: const Text('Per Sq.Ft Area'),
-                      selected: _calculationType == 'per_sq_ft',
-                      onSelected: (s) => _onCalcTypeChanged('per_sq_ft'),
-                    ),
-                    ChoiceChip(
-                      label: const Text('Per Window Unit'),
-                      selected: _calculationType == 'per_window',
-                      onSelected: (s) => _onCalcTypeChanged('per_window'),
-                    ),
-                    ChoiceChip(
-                      label: const Text('Fixed Quantity'),
-                      selected: _calculationType == 'fixed',
-                      onSelected: (s) => _onCalcTypeChanged('fixed'),
-                    ),
-                  ],
+                Builder(
+                  builder: (context) {
+                    final isChannel = _category == 'Channel' || _nameController.text.trim().toLowerCase().contains('channel');
+                    final isWire = _category == 'Wire' || _nameController.text.trim().toLowerCase().contains('wire');
+
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (!isChannel)
+                          ChoiceChip(
+                            label: const Text('Wire (Sq.Ft × 2.7m)'),
+                            selected: _calculationType == 'per_wire_meter',
+                            onSelected: (s) => _onCalcTypeChanged('per_wire_meter'),
+                          ),
+                        if (!isWire)
+                          ChoiceChip(
+                            label: const Text('In Ft (Width × 2)'),
+                            selected: _calculationType == 'per_ft',
+                            onSelected: (s) => _onCalcTypeChanged('per_ft'),
+                          ),
+                        if (!isChannel && !isWire)
+                          ChoiceChip(
+                            label: const Text('Per Sq.Ft Area'),
+                            selected: _calculationType == 'per_sq_ft',
+                            onSelected: (s) => _onCalcTypeChanged('per_sq_ft'),
+                          ),
+                        if (!isChannel && !isWire)
+                          ChoiceChip(
+                            label: const Text('Per Window Unit'),
+                            selected: _calculationType == 'per_window',
+                            onSelected: (s) => _onCalcTypeChanged('per_window'),
+                          ),
+                        ChoiceChip(
+                          label: const Text('Fixed Quantity'),
+                          selected: _calculationType == 'fixed',
+                          onSelected: (s) => _onCalcTypeChanged('fixed'),
+                        ),
+                      ],
+                    );
+                  },
                 ),
                 if (_calculationType == 'per_wire_meter') ...[
                   const SizedBox(height: 6),
