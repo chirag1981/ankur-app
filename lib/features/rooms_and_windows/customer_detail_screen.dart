@@ -592,10 +592,12 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
           final effectiveQty = mat.getEffectiveQuantity(
             totalSqFt: estimate.totalSqFt,
             totalWindows: estimate.totalWindowsCount,
+            totalChannelWidthFt: estimate.totalChannelWidthFeet,
           );
           final lineCost = mat.getTotalCost(
             totalSqFt: estimate.totalSqFt,
             totalWindows: estimate.totalWindowsCount,
+            totalChannelWidthFt: estimate.totalChannelWidthFeet,
           );
 
           return Card(
@@ -645,7 +647,9 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Calculated Qty: ${effectiveQty.toStringAsFixed(2)} ${mat.unit}',
+                          mat.calculationType == 'per_ft'
+                              ? 'Calculated: ${effectiveQty.toStringAsFixed(1)} Ft (${(effectiveQty / 10).toStringAsFixed(1)} × 10ft channels)'
+                              : 'Calculated Qty: ${effectiveQty.toStringAsFixed(2)} ${mat.unit}',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,

@@ -268,12 +268,20 @@ class PdfInvoiceGenerator {
                       _buildCell(mat.name),
                       _buildCell(mat.category),
                       _buildCell(
-                        '${mat.getEffectiveQuantity(totalSqFt: estimate.totalSqFt, totalWindows: estimate.totalWindowsCount).toStringAsFixed(2)} ${mat.unit}',
+                        '${mat.getEffectiveQuantity(
+                          totalSqFt: estimate.totalSqFt,
+                          totalWindows: estimate.totalWindowsCount,
+                          totalChannelWidthFt: estimate.totalChannelWidthFeet,
+                        ).toStringAsFixed(2)} ${mat.unit}',
                         align: pw.TextAlign.center,
                       ),
                       _buildCell('Rs. ${mat.unitPrice.toStringAsFixed(0)}', align: pw.TextAlign.right),
                       _buildCell(
-                        'Rs. ${mat.getTotalCost(totalSqFt: estimate.totalSqFt, totalWindows: estimate.totalWindowsCount).toStringAsFixed(2)}',
+                        'Rs. ${mat.getTotalCost(
+                          totalSqFt: estimate.totalSqFt,
+                          totalWindows: estimate.totalWindowsCount,
+                          totalChannelWidthFt: estimate.totalChannelWidthFeet,
+                        ).toStringAsFixed(2)}',
                         align: pw.TextAlign.right,
                       ),
                     ],

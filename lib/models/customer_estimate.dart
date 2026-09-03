@@ -43,12 +43,22 @@ class CustomerEstimate {
     return allWindows.fold(0.0, (sum, w) => sum + w.perimeterFeet);
   }
 
+  /// Total width in feet multiplied by 2 across all windows (top & bottom channel length)
+  double get totalChannelWidthFeet {
+    return allWindows.fold(0.0, (sum, w) => sum + (w.widthFeet * 2.0 * (w.quantity > 0 ? w.quantity : 1)));
+  }
+
   /// Total material cost calculated automatically
   double get materialsCost {
     final sqFt = totalSqFt;
     final winCount = totalWindowsCount;
+    final channelFt = totalChannelWidthFeet;
     return materials.fold(0.0, (sum, item) {
-      return sum + item.getTotalCost(totalSqFt: sqFt, totalWindows: winCount);
+      return sum + item.getTotalCost(
+        totalSqFt: sqFt,
+        totalWindows: winCount,
+        totalChannelWidthFt: channelFt,
+      );
     });
   }
 
@@ -101,5 +111,11 @@ class CustomerEstimate {
   int getRoomWindowsCount(int roomId) {
     final roomWindows = windowsByRoom[roomId] ?? [];
     return roomWindows.fold(0, (sum, w) => sum + w.quantity);
+  }
+
+  /// Returns total channel width in feet (width * 2) for a specific room
+  double getRoomChannelWidthFeet(int roomId) {
+    final roomWindows = windowsByRoom[roomId] ?? [];
+    return roomWindows.fold(0.0, (sum, w) => sum + (w.widthFeet * 2.0 * (w.quantity > 0 ? w.quantity : 1)));
   }
 }

@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
       onOpen: (db) async {
@@ -29,6 +29,13 @@ class DatabaseHelper {
           UPDATE materials 
           SET unit_price = 20.0, calculation_type = 'per_sq_ft', unit = 'Sq. Ft'
           WHERE LOWER(name) = 'labor' AND (unit_price = 40.0 OR calculation_type != 'per_sq_ft')
+        ''');
+
+        // Automatically ensure Channel is configured in Ft (width * 2) at 90.0/ft (10ft = 900rs)
+        await db.execute('''
+          UPDATE materials 
+          SET unit = 'Ft', unit_price = 90.0, calculation_type = 'per_ft'
+          WHERE LOWER(name) = 'channel' AND (calculation_type = 'per_sq_ft' OR unit = 'Sq. Ft')
         ''');
       },
       onConfigure: (db) async {
@@ -112,6 +119,13 @@ class DatabaseHelper {
         WHERE LOWER(name) = 'labor'
       ''');
     }
+    if (oldVersion < 3) {
+      await db.execute('''
+        UPDATE materials 
+        SET unit = 'Ft', unit_price = 90.0, calculation_type = 'per_ft'
+        WHERE LOWER(name) = 'channel'
+      ''');
+    }
   }
 
   Future<void> _seedDefaultMasterMaterials(Database db) async {
@@ -120,9 +134,9 @@ class DatabaseHelper {
         'customer_id': null,
         'name': 'Channel',
         'category': 'Channel',
-        'unit': 'Sq. Ft',
-        'unit_price': 120.0,
-        'calculation_type': 'per_sq_ft',
+        'unit': 'Ft',
+        'unit_price': 90.0,
+        'calculation_type': 'per_ft',
         'multiplier': 1.0,
         'manual_quantity': 1.0,
         'is_enabled': 1,

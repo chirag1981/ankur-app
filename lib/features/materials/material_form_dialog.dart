@@ -74,7 +74,9 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
     if (type == null) return;
     setState(() {
       _calculationType = type;
-      if (type == 'per_sq_ft') {
+      if (type == 'per_ft') {
+        _unit = 'Ft';
+      } else if (type == 'per_sq_ft') {
         _unit = 'Sq. Ft';
       } else if (type == 'per_window') {
         _unit = 'Per Window';
@@ -163,15 +165,27 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                     prefixIcon: Icon(Icons.category_outlined),
                   ),
                   onChanged: (val) {
-                    if (val.trim().toLowerCase().contains('labor') && widget.initialMaterial == null) {
-                      setState(() {
-                        _category = 'Labor';
-                        _calculationType = 'per_sq_ft';
-                        _unit = 'Sq. Ft';
-                        if (_priceController.text.isEmpty) {
-                          _priceController.text = '20';
-                        }
-                      });
+                    if (widget.initialMaterial == null) {
+                      final lower = val.trim().toLowerCase();
+                      if (lower.contains('channel')) {
+                        setState(() {
+                          _category = 'Channel';
+                          _calculationType = 'per_ft';
+                          _unit = 'Ft';
+                          if (_priceController.text.isEmpty) {
+                            _priceController.text = '90';
+                          }
+                        });
+                      } else if (lower.contains('labor')) {
+                        setState(() {
+                          _category = 'Labor';
+                          _calculationType = 'per_sq_ft';
+                          _unit = 'Sq. Ft';
+                          if (_priceController.text.isEmpty) {
+                            _priceController.text = '20';
+                          }
+                        });
+                      }
                     }
                   },
                   validator: (val) {
@@ -197,7 +211,13 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                           if (val == null) return;
                           setState(() {
                             _category = val;
-                            if (val == 'Labor') {
+                            if (val == 'Channel') {
+                              _calculationType = 'per_ft';
+                              _unit = 'Ft';
+                              if (_priceController.text.isEmpty) {
+                                _priceController.text = '90';
+                              }
+                            } else if (val == 'Labor') {
                               _calculationType = 'per_sq_ft';
                               _unit = 'Sq. Ft';
                               if (_priceController.text.isEmpty) {
@@ -215,7 +235,7 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         decoration: const InputDecoration(
                           labelText: 'Rate (₹) *',
-                          hintText: '20',
+                          hintText: '90',
                           prefixText: '₹ ',
                         ),
                         validator: (val) {
@@ -237,6 +257,7 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                 const SizedBox(height: 6),
                 SegmentedButton<String>(
                   segments: const [
+                    ButtonSegment(value: 'per_ft', label: Text('In Ft (W×2)')),
                     ButtonSegment(value: 'per_sq_ft', label: Text('Per Sq.Ft')),
                     ButtonSegment(value: 'per_window', label: Text('Per Window')),
                     ButtonSegment(value: 'fixed', label: Text('Fixed')),
@@ -244,6 +265,13 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                   selected: {_calculationType},
                   onSelectionChanged: (val) => _onCalcTypeChanged(val.first),
                 ),
+                if (_calculationType == 'per_ft') ...[
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Calculated on width in ft × 2 per window (top & bottom track). One 10ft channel is ₹900 (₹90/ft).',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
+                  ),
+                ],
                 const SizedBox(height: 14),
 
                 if (_calculationType == 'fixed') ...[

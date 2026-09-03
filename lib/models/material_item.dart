@@ -23,13 +23,16 @@ class MaterialItem {
     this.isEnabled = true,
   });
 
-  /// Computes effective quantity based on customer's total Sq. Ft or Window count
+  /// Computes effective quantity based on customer's total Sq. Ft, Window count, or Channel width in feet (width * 2)
   double getEffectiveQuantity({
     required double totalSqFt,
     required int totalWindows,
+    double totalChannelWidthFt = 0.0,
   }) {
     if (!isEnabled) return 0.0;
     switch (calculationType) {
+      case 'per_ft':
+        return totalChannelWidthFt * multiplier;
       case 'per_sq_ft':
         return totalSqFt * multiplier;
       case 'per_window':
@@ -44,11 +47,13 @@ class MaterialItem {
   double getTotalCost({
     required double totalSqFt,
     required int totalWindows,
+    double totalChannelWidthFt = 0.0,
   }) {
     if (!isEnabled) return 0.0;
     final qty = getEffectiveQuantity(
       totalSqFt: totalSqFt,
       totalWindows: totalWindows,
+      totalChannelWidthFt: totalChannelWidthFt,
     );
     return qty * unitPrice;
   }

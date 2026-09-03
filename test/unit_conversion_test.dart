@@ -85,6 +85,42 @@ void main() {
       expect(totalLaborCost, equals(1000.0)); // 50 sq ft * 20 Rs = 1000 Rs
     });
 
+    test('Channel cost is calculated in ft on width * 2 at 90rs per ft (10ft bar = 900rs)', () {
+      final window = WindowItem(
+        roomId: 1,
+        customerId: 1,
+        label: 'Window 1',
+        widthInches: 120.0, // 10 ft
+        heightInches: 60.0,  // 5 ft
+        quantity: 1,
+      );
+
+      final channelFt = window.widthFeet * 2.0 * window.quantity; // 10 ft * 2 = 20 ft
+      expect(channelFt, equals(20.0));
+
+      final channel = MaterialItem(
+        name: 'Channel',
+        category: 'Channel',
+        unit: 'Ft',
+        unitPrice: 90.0, // 90 Rs per ft (900 Rs per 10ft bar)
+        calculationType: 'per_ft',
+      );
+
+      final effectiveQty = channel.getEffectiveQuantity(
+        totalSqFt: window.totalSqFt,
+        totalWindows: 1,
+        totalChannelWidthFt: channelFt,
+      );
+      final totalChannelCost = channel.getTotalCost(
+        totalSqFt: window.totalSqFt,
+        totalWindows: 1,
+        totalChannelWidthFt: channelFt,
+      );
+
+      expect(effectiveQty, equals(20.0)); // 20 ft
+      expect(totalChannelCost, equals(1800.0)); // 20 ft * 90 Rs = 1800 Rs (2 channels of 10ft @ 900 Rs)
+    });
+
     test('CustomerEstimate aggregates multiple rooms and calculates discount properly', () {
       final customer = Customer(
         id: 1,
