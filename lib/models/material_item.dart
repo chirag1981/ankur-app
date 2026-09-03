@@ -23,7 +23,7 @@ class MaterialItem {
     this.isEnabled = true,
   });
 
-  /// Computes effective quantity based on customer's total Sq. Ft, Window count, or Channel width in feet (width * 2)
+  /// Computes effective quantity based on customer's total Sq. Ft, Window count, Channel width in feet, or Wire in meters (sq ft * 2.7)
   double getEffectiveQuantity({
     required double totalSqFt,
     required int totalWindows,
@@ -31,6 +31,8 @@ class MaterialItem {
   }) {
     if (!isEnabled) return 0.0;
     switch (calculationType) {
+      case 'per_wire_meter':
+        return totalSqFt * 2.7 * multiplier;
       case 'per_ft':
         return totalChannelWidthFt * multiplier;
       case 'per_sq_ft':

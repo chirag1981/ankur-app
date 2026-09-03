@@ -121,6 +121,44 @@ void main() {
       expect(totalChannelCost, equals(1800.0)); // 20 ft * 90 Rs = 1800 Rs (2 channels of 10ft @ 900 Rs)
     });
 
+    test('Wire calculations measure total sq ft * 2.7 meters with 2mm (9rs), 2.5mm (13rs), and 3mm (16rs)', () {
+      const totalSqFt = 100.0;
+      const expectedMeters = 270.0; // 100 * 2.7m
+
+      final wire2mm = MaterialItem(
+        name: 'Wire (2mm)',
+        category: 'Wire',
+        unit: 'Meter',
+        unitPrice: 9.0,
+        calculationType: 'per_wire_meter',
+      );
+
+      final wire25mm = MaterialItem(
+        name: 'Wire (2.5mm)',
+        category: 'Wire',
+        unit: 'Meter',
+        unitPrice: 13.0,
+        calculationType: 'per_wire_meter',
+      );
+
+      final wire3mm = MaterialItem(
+        name: 'Wire (3mm)',
+        category: 'Wire',
+        unit: 'Meter',
+        unitPrice: 16.0,
+        calculationType: 'per_wire_meter',
+      );
+
+      expect(wire2mm.getEffectiveQuantity(totalSqFt: totalSqFt, totalWindows: 2), equals(expectedMeters));
+      expect(wire2mm.getTotalCost(totalSqFt: totalSqFt, totalWindows: 2), equals(2430.0)); // 270m * 9 Rs
+
+      expect(wire25mm.getEffectiveQuantity(totalSqFt: totalSqFt, totalWindows: 2), equals(expectedMeters));
+      expect(wire25mm.getTotalCost(totalSqFt: totalSqFt, totalWindows: 2), equals(3510.0)); // 270m * 13 Rs
+
+      expect(wire3mm.getEffectiveQuantity(totalSqFt: totalSqFt, totalWindows: 2), equals(expectedMeters));
+      expect(wire3mm.getTotalCost(totalSqFt: totalSqFt, totalWindows: 2), equals(4320.0)); // 270m * 16 Rs
+    });
+
     test('CustomerEstimate aggregates multiple rooms and calculates discount properly', () {
       final customer = Customer(
         id: 1,

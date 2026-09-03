@@ -76,6 +76,8 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
       _calculationType = type;
       if (type == 'per_ft') {
         _unit = 'Ft';
+      } else if (type == 'per_wire_meter') {
+        _unit = 'Meter';
       } else if (type == 'per_sq_ft') {
         _unit = 'Sq. Ft';
       } else if (type == 'per_window') {
@@ -167,7 +169,16 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                   onChanged: (val) {
                     if (widget.initialMaterial == null) {
                       final lower = val.trim().toLowerCase();
-                      if (lower.contains('channel')) {
+                      if (lower.contains('wire')) {
+                        setState(() {
+                          _category = 'Wire';
+                          _calculationType = 'per_wire_meter';
+                          _unit = 'Meter';
+                          if (_priceController.text.isEmpty) {
+                            _priceController.text = '13';
+                          }
+                        });
+                      } else if (lower.contains('channel')) {
                         setState(() {
                           _category = 'Channel';
                           _calculationType = 'per_ft';
@@ -211,7 +222,13 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                           if (val == null) return;
                           setState(() {
                             _category = val;
-                            if (val == 'Channel') {
+                            if (val == 'Wire') {
+                              _calculationType = 'per_wire_meter';
+                              _unit = 'Meter';
+                              if (_priceController.text.isEmpty) {
+                                _priceController.text = '13';
+                              }
+                            } else if (val == 'Channel') {
                               _calculationType = 'per_ft';
                               _unit = 'Ft';
                               if (_priceController.text.isEmpty) {
@@ -233,9 +250,9 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                       child: TextFormField(
                         controller: _priceController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Rate (₹) *',
-                          hintText: '90',
+                          hintText: _category == 'Wire' ? '13' : '90',
                           prefixText: '₹ ',
                         ),
                         validator: (val) {
@@ -247,6 +264,61 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                     ),
                   ],
                 ),
+
+                // Quick Wire Thickness Presets
+                if (_category == 'Wire' || _calculationType == 'per_wire_meter') ...[
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Wire Thickness & Standard Rates:',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      ActionChip(
+                        label: const Text('2mm (₹9/m)'),
+                        avatar: const Icon(Icons.cable, size: 14),
+                        onPressed: () {
+                          setState(() {
+                            _nameController.text = 'Wire (2mm)';
+                            _category = 'Wire';
+                            _unit = 'Meter';
+                            _calculationType = 'per_wire_meter';
+                            _priceController.text = '9';
+                          });
+                        },
+                      ),
+                      ActionChip(
+                        label: const Text('2.5mm (₹13/m)'),
+                        avatar: const Icon(Icons.cable, size: 14),
+                        onPressed: () {
+                          setState(() {
+                            _nameController.text = 'Wire (2.5mm)';
+                            _category = 'Wire';
+                            _unit = 'Meter';
+                            _calculationType = 'per_wire_meter';
+                            _priceController.text = '13';
+                          });
+                        },
+                      ),
+                      ActionChip(
+                        label: const Text('3mm (₹16/m)'),
+                        avatar: const Icon(Icons.cable, size: 14),
+                        onPressed: () {
+                          setState(() {
+                            _nameController.text = 'Wire (3mm)';
+                            _category = 'Wire';
+                            _unit = 'Meter';
+                            _calculationType = 'per_wire_meter';
+                            _priceController.text = '16';
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+
                 const SizedBox(height: 14),
 
                 // Calculation Basis
@@ -255,17 +327,44 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textMuted),
                 ),
                 const SizedBox(height: 6),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'per_ft', label: Text('In Ft (W×2)')),
-                    ButtonSegment(value: 'per_sq_ft', label: Text('Per Sq.Ft')),
-                    ButtonSegment(value: 'per_window', label: Text('Per Window')),
-                    ButtonSegment(value: 'fixed', label: Text('Fixed')),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Wire (Sq.Ft × 2.7m)'),
+                      selected: _calculationType == 'per_wire_meter',
+                      onSelected: (s) => _onCalcTypeChanged('per_wire_meter'),
+                    ),
+                    ChoiceChip(
+                      label: const Text('In Ft (Width × 2)'),
+                      selected: _calculationType == 'per_ft',
+                      onSelected: (s) => _onCalcTypeChanged('per_ft'),
+                    ),
+                    ChoiceChip(
+                      label: const Text('Per Sq.Ft Area'),
+                      selected: _calculationType == 'per_sq_ft',
+                      onSelected: (s) => _onCalcTypeChanged('per_sq_ft'),
+                    ),
+                    ChoiceChip(
+                      label: const Text('Per Window Unit'),
+                      selected: _calculationType == 'per_window',
+                      onSelected: (s) => _onCalcTypeChanged('per_window'),
+                    ),
+                    ChoiceChip(
+                      label: const Text('Fixed Quantity'),
+                      selected: _calculationType == 'fixed',
+                      onSelected: (s) => _onCalcTypeChanged('fixed'),
+                    ),
                   ],
-                  selected: {_calculationType},
-                  onSelectionChanged: (val) => _onCalcTypeChanged(val.first),
                 ),
-                if (_calculationType == 'per_ft') ...[
+                if (_calculationType == 'per_wire_meter') ...[
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Wire length is automatically measured as Total Sq. Ft × 2.7 meters. Rates: 2mm @ ₹9/m, 2.5mm @ ₹13/m, 3mm @ ₹16/m.',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
+                  ),
+                ] else if (_calculationType == 'per_ft') ...[
                   const SizedBox(height: 6),
                   const Text(
                     'Calculated on width in ft × 2 per window (top & bottom track). One 10ft channel is ₹900 (₹90/ft).',

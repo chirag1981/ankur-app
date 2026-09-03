@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
       onOpen: (db) async {
@@ -36,6 +36,13 @@ class DatabaseHelper {
           UPDATE materials 
           SET unit = 'Ft', unit_price = 90.0, calculation_type = 'per_ft'
           WHERE LOWER(name) = 'channel' AND (calculation_type = 'per_sq_ft' OR unit = 'Sq. Ft')
+        ''');
+
+        // Automatically ensure Wire is configured in Meters (Sq.Ft * 2.7)
+        await db.execute('''
+          UPDATE materials 
+          SET unit = 'Meter', unit_price = 13.0, calculation_type = 'per_wire_meter', name = 'Wire (2.5mm)'
+          WHERE LOWER(name) = 'wire' AND (calculation_type = 'per_sq_ft' OR unit = 'Sq. Ft')
         ''');
       },
       onConfigure: (db) async {
@@ -126,6 +133,13 @@ class DatabaseHelper {
         WHERE LOWER(name) = 'channel'
       ''');
     }
+    if (oldVersion < 4) {
+      await db.execute('''
+        UPDATE materials 
+        SET unit = 'Meter', unit_price = 13.0, calculation_type = 'per_wire_meter', name = 'Wire (2.5mm)'
+        WHERE LOWER(name) = 'wire' AND (calculation_type = 'per_sq_ft' OR unit = 'Sq. Ft')
+      ''');
+    }
   }
 
   Future<void> _seedDefaultMasterMaterials(Database db) async {
@@ -143,14 +157,36 @@ class DatabaseHelper {
       },
       {
         'customer_id': null,
-        'name': 'Wire',
+        'name': 'Wire (2.5mm)',
         'category': 'Wire',
-        'unit': 'Sq. Ft',
-        'unit_price': 85.0,
-        'calculation_type': 'per_sq_ft',
+        'unit': 'Meter',
+        'unit_price': 13.0,
+        'calculation_type': 'per_wire_meter',
         'multiplier': 1.0,
         'manual_quantity': 1.0,
         'is_enabled': 1,
+      },
+      {
+        'customer_id': null,
+        'name': 'Wire (2mm)',
+        'category': 'Wire',
+        'unit': 'Meter',
+        'unit_price': 9.0,
+        'calculation_type': 'per_wire_meter',
+        'multiplier': 1.0,
+        'manual_quantity': 1.0,
+        'is_enabled': 0,
+      },
+      {
+        'customer_id': null,
+        'name': 'Wire (3mm)',
+        'category': 'Wire',
+        'unit': 'Meter',
+        'unit_price': 16.0,
+        'calculation_type': 'per_wire_meter',
+        'multiplier': 1.0,
+        'manual_quantity': 1.0,
+        'is_enabled': 0,
       },
       {
         'customer_id': null,

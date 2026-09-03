@@ -125,6 +125,8 @@ class MasterMaterialsScreen extends ConsumerWidget {
 
   String _formatCalcType(String type) {
     switch (type) {
+      case 'per_wire_meter':
+        return 'Wire (Sq.Ft × 2.7m)';
       case 'per_ft':
         return 'In Ft (Width × 2)';
       case 'per_sq_ft':

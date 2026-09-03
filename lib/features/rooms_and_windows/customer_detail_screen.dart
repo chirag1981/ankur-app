@@ -549,7 +549,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'Materials like Channel, Wire, and Fitting Labor (at ₹20/sq.ft) are automatically calculated based on your total measurement (${estimate.totalSqFt.toStringAsFixed(2)} Sq. Ft across ${estimate.totalWindowsCount} Windows). You can adjust rates, toggle items, or add custom materials below.',
+                'Materials like Channel (width × 2 @ ₹90/ft), Wire (total sq ft × 2.7m), and Fitting Labor (at ₹20/sq.ft) are automatically calculated based on your total measurement (${estimate.totalSqFt.toStringAsFixed(2)} Sq. Ft, ${estimate.totalChannelWidthFeet.toStringAsFixed(2)} Ft Channel across ${estimate.totalWindowsCount} Windows). You can adjust rates, toggle items, or add custom materials below.',
                 style: const TextStyle(fontSize: 12.5, color: AppColors.textDark, height: 1.4),
               ),
             ],
@@ -649,7 +649,9 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                         Text(
                           mat.calculationType == 'per_ft'
                               ? 'Calculated: ${effectiveQty.toStringAsFixed(1)} Ft (${(effectiveQty / 10).toStringAsFixed(1)} × 10ft channels)'
-                              : 'Calculated Qty: ${effectiveQty.toStringAsFixed(2)} ${mat.unit}',
+                              : mat.calculationType == 'per_wire_meter'
+                                  ? 'Calculated: ${effectiveQty.toStringAsFixed(1)} Meters (Sq.Ft × 2.7m)'
+                                  : 'Calculated Qty: ${effectiveQty.toStringAsFixed(2)} ${mat.unit}',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
