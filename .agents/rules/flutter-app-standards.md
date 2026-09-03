@@ -159,6 +159,7 @@ Every Flutter app must look visually stunning, polished, and premium. Never prod
 🧪 Testing & Code Quality
 ────────────────────────────────────────
 
+- **Skip Automatic Tests**: Do **NOT** automatically run `flutter test` after code changes or edits. Only execute tests on-demand when the user explicitly requests it (e.g. *"run tests"* or *"test this"*). Keep verification fast and lightweight.
 - **Unit Tests (`test/`)**: Test all business logic, Domain Use Cases, formatters, and repository data mappings with `flutter_test`.
 - **Widget Tests**: Verify critical UI interactions, forms, and error states using `testWidgets()`.
 - **Code Analysis**: Every commit must pass `flutter analyze` with **0 errors and 0 warnings**.
