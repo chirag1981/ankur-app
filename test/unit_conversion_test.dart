@@ -159,6 +159,43 @@ void main() {
       expect(wire3mm.getTotalCost(totalSqFt: totalSqFt, totalWindows: 2), equals(4320.0)); // 270m * 16 Rs
     });
 
+    test('Bolt cost is calculated based on channels used with 12 bolts per channel', () {
+      final window = WindowItem(
+        roomId: 1,
+        customerId: 1,
+        label: 'Window 1',
+        widthInches: 120.0, // 10 ft width
+        heightInches: 60.0,
+        quantity: 1,
+      );
+
+      final channelFt = window.widthFeet * 2.0 * window.quantity; // 20 ft
+      expect(channelFt, equals(20.0)); // 2 channels of 10ft
+
+      final bolt = MaterialItem(
+        name: 'Bolt',
+        category: 'Hardware',
+        unit: 'Pcs',
+        unitPrice: 5.0,
+        calculationType: 'per_channel_bolts',
+      );
+
+      final effectiveQty = bolt.getEffectiveQuantity(
+        totalSqFt: window.totalSqFt,
+        totalWindows: 1,
+        totalChannelWidthFt: channelFt,
+      );
+      final totalCost = bolt.getTotalCost(
+        totalSqFt: window.totalSqFt,
+        totalWindows: 1,
+        totalChannelWidthFt: channelFt,
+      );
+
+      // 20 ft / 10 ft = 2 channels used -> 2 * 12 = 24 bolts
+      expect(effectiveQty, equals(24.0));
+      expect(totalCost, equals(120.0)); // 24 bolts * 5 Rs = 120 Rs
+    });
+
     test('CustomerEstimate aggregates multiple rooms and calculates discount properly', () {
       final customer = Customer(
         id: 1,

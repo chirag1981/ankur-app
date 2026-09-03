@@ -48,6 +48,12 @@ class CustomerEstimate {
     return allWindows.fold(0.0, (sum, w) => sum + (w.widthFeet * 2.0 * (w.quantity > 0 ? w.quantity : 1)));
   }
 
+  /// Total 10ft channel bars used across all windows (ceil of totalChannelWidthFeet / 10)
+  int get totalChannelsUsed {
+    if (totalChannelWidthFeet <= 0) return 0;
+    return (totalChannelWidthFeet / 10.0).ceil();
+  }
+
   /// Total material cost calculated automatically
   double get materialsCost {
     final sqFt = totalSqFt;
@@ -117,5 +123,12 @@ class CustomerEstimate {
   double getRoomChannelWidthFeet(int roomId) {
     final roomWindows = windowsByRoom[roomId] ?? [];
     return roomWindows.fold(0.0, (sum, w) => sum + (w.widthFeet * 2.0 * (w.quantity > 0 ? w.quantity : 1)));
+  }
+
+  /// Returns total 10ft channel bars used for a specific room
+  int getRoomChannelsUsed(int roomId) {
+    final ft = getRoomChannelWidthFeet(roomId);
+    if (ft <= 0) return 0;
+    return (ft / 10.0).ceil();
   }
 }

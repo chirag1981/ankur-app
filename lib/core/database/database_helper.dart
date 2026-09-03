@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
       onOpen: (db) async {
@@ -44,6 +44,13 @@ class DatabaseHelper {
           UPDATE materials 
           SET unit = 'Meter', unit_price = 13.0, calculation_type = 'per_wire_meter', name = 'Wire (2.5mm)'
           WHERE LOWER(name) = 'wire' AND (calculation_type = 'per_sq_ft' OR unit = 'Sq. Ft')
+        ''');
+
+        // Automatically ensure Bolt is configured as per_channel_bolts (12 bolts per 10ft channel)
+        await db.execute('''
+          UPDATE materials 
+          SET unit = 'Pcs', calculation_type = 'per_channel_bolts'
+          WHERE LOWER(name) LIKE '%bolt%' AND (calculation_type = 'per_window' OR calculation_type = 'per_sq_ft')
         ''');
       },
       onConfigure: (db) async {
@@ -141,6 +148,13 @@ class DatabaseHelper {
         WHERE LOWER(name) = 'wire' AND (calculation_type = 'per_sq_ft' OR unit = 'Sq. Ft')
       ''');
     }
+    if (oldVersion < 5) {
+      await db.execute('''
+        UPDATE materials 
+        SET unit = 'Pcs', calculation_type = 'per_channel_bolts'
+        WHERE LOWER(name) LIKE '%bolt%'
+      ''');
+    }
   }
 
   Future<void> _seedDefaultMasterMaterials(Database db) async {
@@ -193,9 +207,9 @@ class DatabaseHelper {
         'customer_id': null,
         'name': 'Bolt',
         'category': 'Hardware',
-        'unit': 'Per Window',
-        'unit_price': 30.0,
-        'calculation_type': 'per_window',
+        'unit': 'Pcs',
+        'unit_price': 5.0,
+        'calculation_type': 'per_channel_bolts',
         'multiplier': 1.0,
         'manual_quantity': 1.0,
         'is_enabled': 1,

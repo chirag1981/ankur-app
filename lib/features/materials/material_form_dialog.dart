@@ -78,7 +78,9 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
     if (type == null) return;
     setState(() {
       _calculationType = type;
-      if (type == 'per_ft') {
+      if (type == 'per_channel_bolts') {
+        _unit = 'Pcs';
+      } else if (type == 'per_ft') {
         _unit = 'Ft';
       } else if (type == 'per_wire_meter') {
         _unit = 'Meter';
@@ -198,6 +200,15 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                           _unit = 'Sq. Ft';
                           if (_priceController.text.isEmpty) {
                             _priceController.text = '20';
+                          }
+                        });
+                      } else if (lower.contains('bolt')) {
+                        setState(() {
+                          _category = 'Hardware';
+                          _calculationType = 'per_channel_bolts';
+                          _unit = 'Pcs';
+                          if (_priceController.text.isEmpty) {
+                            _priceController.text = '5';
                           }
                         });
                       }
@@ -354,6 +365,12 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                           ),
                         if (!isChannel && !isWire)
                           ChoiceChip(
+                            label: const Text('Bolts (12 / Channel)'),
+                            selected: _calculationType == 'per_channel_bolts',
+                            onSelected: (s) => _onCalcTypeChanged('per_channel_bolts'),
+                          ),
+                        if (!isChannel && !isWire)
+                          ChoiceChip(
                             label: const Text('Per Sq.Ft Area'),
                             selected: _calculationType == 'per_sq_ft',
                             onSelected: (s) => _onCalcTypeChanged('per_sq_ft'),
@@ -373,7 +390,13 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                     );
                   },
                 ),
-                if (_calculationType == 'per_wire_meter') ...[
+                if (_calculationType == 'per_channel_bolts') ...[
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Bolts are counted on channels used: 12 bolts for each 10ft channel.',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
+                  ),
+                ] else if (_calculationType == 'per_wire_meter') ...[
                   const SizedBox(height: 6),
                   const Text(
                     'Wire length is automatically measured as Total Sq. Ft × 2.7 meters. Rates: 2mm @ ₹9/m, 2.5mm @ ₹13/m, 3mm @ ₹16/m.',
