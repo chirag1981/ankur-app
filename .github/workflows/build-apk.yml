@@ -47,12 +47,12 @@ jobs:
       - name: Prepare Single Universal APK
         run: |
           mkdir -p dist_apk
-          cp build/app/outputs/flutter-apk/app-release.apk dist_apk/Frankie-Vendor.apk
+          find build/app/outputs/flutter-apk -name "*.apk" -not -name "*debug*" -exec cp {} dist_apk/Invisible-Grills.apk \; || cp build/app/outputs/flutter-apk/app-release.apk dist_apk/Invisible-Grills.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Frankie-Vendor-APK
-          path: dist_apk/Frankie-Vendor.apk
+          name: Invisible-Grills-APK
+          path: dist_apk/Invisible-Grills.apk
           if-no-files-found: error
           retention-days: 30
