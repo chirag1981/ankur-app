@@ -60,6 +60,31 @@ void main() {
       expect(totalCost, equals(15000.0));
     });
 
+    test('Labor cost is automatically measured on total sq ft at 20rs per sq ft', () {
+      final labor = MaterialItem(
+        name: 'Labor',
+        category: 'Labor',
+        unit: 'Sq. Ft',
+        unitPrice: 20.0,
+        calculationType: 'per_sq_ft',
+      );
+
+      expect(labor.calculationType, equals('per_sq_ft'));
+      expect(labor.unitPrice, equals(20.0));
+
+      final effectiveQty = labor.getEffectiveQuantity(
+        totalSqFt: 50.0,
+        totalWindows: 2,
+      );
+      final totalLaborCost = labor.getTotalCost(
+        totalSqFt: 50.0,
+        totalWindows: 2,
+      );
+
+      expect(effectiveQty, equals(50.0));
+      expect(totalLaborCost, equals(1000.0)); // 50 sq ft * 20 Rs = 1000 Rs
+    });
+
     test('CustomerEstimate aggregates multiple rooms and calculates discount properly', () {
       final customer = Customer(
         id: 1,

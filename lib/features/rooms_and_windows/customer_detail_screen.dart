@@ -553,7 +553,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'Materials like Channels, Glass, and Fitting Labor are automatically calculated based on your total measurement (${estimate.totalSqFt.toStringAsFixed(2)} Sq. Ft across ${estimate.totalWindowsCount} Windows). You can adjust rates, toggle items, or add custom materials below.',
+                'Materials like Channel, Wire, and Fitting Labor (at ₹20/sq.ft) are automatically calculated based on your total measurement (${estimate.totalSqFt.toStringAsFixed(2)} Sq. Ft across ${estimate.totalWindowsCount} Windows). You can adjust rates, toggle items, or add custom materials below.',
                 style: const TextStyle(fontSize: 12.5, color: AppColors.textDark, height: 1.4),
               ),
             ],

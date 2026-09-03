@@ -159,9 +159,21 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
                     labelText: 'Material / Work Name *',
-                    hintText: 'e.g. Aluminium 3-Track Section',
+                    hintText: 'e.g. Fitting Labor / Aluminium Track',
                     prefixIcon: Icon(Icons.category_outlined),
                   ),
+                  onChanged: (val) {
+                    if (val.trim().toLowerCase().contains('labor') && widget.initialMaterial == null) {
+                      setState(() {
+                        _category = 'Labor';
+                        _calculationType = 'per_sq_ft';
+                        _unit = 'Sq. Ft';
+                        if (_priceController.text.isEmpty) {
+                          _priceController.text = '20';
+                        }
+                      });
+                    }
+                  },
                   validator: (val) {
                     if (val == null || val.trim().isEmpty) {
                       return 'Please enter material name';
@@ -176,12 +188,24 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        initialValue: _category,
+                        value: _category,
                         decoration: const InputDecoration(labelText: 'Category'),
                         items: _categories
                             .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                             .toList(),
-                        onChanged: (val) => setState(() => _category = val ?? 'Channel'),
+                        onChanged: (val) {
+                          if (val == null) return;
+                          setState(() {
+                            _category = val;
+                            if (val == 'Labor') {
+                              _calculationType = 'per_sq_ft';
+                              _unit = 'Sq. Ft';
+                              if (_priceController.text.isEmpty) {
+                                _priceController.text = '20';
+                              }
+                            }
+                          });
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -191,7 +215,7 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         decoration: const InputDecoration(
                           labelText: 'Rate (₹) *',
-                          hintText: '140',
+                          hintText: '20',
                           prefixText: '₹ ',
                         ),
                         validator: (val) {

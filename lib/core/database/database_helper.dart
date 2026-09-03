@@ -20,8 +20,17 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
+      onOpen: (db) async {
+        // Automatically ensure master and default Labor materials are updated to 20.0/sq.ft
+        await db.execute('''
+          UPDATE materials 
+          SET unit_price = 20.0, calculation_type = 'per_sq_ft', unit = 'Sq. Ft'
+          WHERE LOWER(name) = 'labor' AND (unit_price = 40.0 OR calculation_type != 'per_sq_ft')
+        ''');
+      },
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -95,6 +104,16 @@ class DatabaseHelper {
     await _seedDefaultMasterMaterials(db);
   }
 
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        UPDATE materials 
+        SET unit_price = 20.0, calculation_type = 'per_sq_ft', unit = 'Sq. Ft'
+        WHERE LOWER(name) = 'labor'
+      ''');
+    }
+  }
+
   Future<void> _seedDefaultMasterMaterials(Database db) async {
     final defaultMaterials = [
       {
@@ -146,7 +165,7 @@ class DatabaseHelper {
         'name': 'Labor',
         'category': 'Labor',
         'unit': 'Sq. Ft',
-        'unit_price': 40.0,
+        'unit_price': 20.0,
         'calculation_type': 'per_sq_ft',
         'multiplier': 1.0,
         'manual_quantity': 1.0,
