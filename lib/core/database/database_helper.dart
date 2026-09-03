@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
       onOpen: (db) async {
@@ -51,6 +51,13 @@ class DatabaseHelper {
           UPDATE materials 
           SET unit = 'Pcs', calculation_type = 'per_channel_bolts'
           WHERE LOWER(name) LIKE '%bolt%' AND (calculation_type = 'per_window' OR calculation_type = 'per_sq_ft')
+        ''');
+
+        // Automatically ensure Chokdi is configured as per_channel_chokdi (60 chokdi per 10ft channel)
+        await db.execute('''
+          UPDATE materials 
+          SET unit = 'Pcs', calculation_type = 'per_channel_chokdi'
+          WHERE LOWER(name) LIKE '%chokdi%' AND (calculation_type = 'per_window' OR calculation_type = 'per_sq_ft')
         ''');
       },
       onConfigure: (db) async {
@@ -155,6 +162,13 @@ class DatabaseHelper {
         WHERE LOWER(name) LIKE '%bolt%'
       ''');
     }
+    if (oldVersion < 6) {
+      await db.execute('''
+        UPDATE materials 
+        SET unit = 'Pcs', calculation_type = 'per_channel_chokdi'
+        WHERE LOWER(name) LIKE '%chokdi%'
+      ''');
+    }
   }
 
   Future<void> _seedDefaultMasterMaterials(Database db) async {
@@ -218,9 +232,9 @@ class DatabaseHelper {
         'customer_id': null,
         'name': 'Chokdi',
         'category': 'Hardware',
-        'unit': 'Per Window',
-        'unit_price': 50.0,
-        'calculation_type': 'per_window',
+        'unit': 'Pcs',
+        'unit_price': 2.0,
+        'calculation_type': 'per_channel_chokdi',
         'multiplier': 1.0,
         'manual_quantity': 1.0,
         'is_enabled': 1,

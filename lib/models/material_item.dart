@@ -31,6 +31,9 @@ class MaterialItem {
   }) {
     if (!isEnabled) return 0.0;
     switch (calculationType) {
+      case 'per_channel_chokdi':
+        final channelsCount = totalChannelWidthFt > 0 ? (totalChannelWidthFt / 10.0).ceil() : 0;
+        return (channelsCount * 60 * multiplier).toDouble();
       case 'per_channel_bolts':
         final channelsCount = totalChannelWidthFt > 0 ? (totalChannelWidthFt / 10.0).ceil() : 0;
         return (channelsCount * 12 * multiplier).toDouble();

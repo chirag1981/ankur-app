@@ -78,7 +78,7 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
     if (type == null) return;
     setState(() {
       _calculationType = type;
-      if (type == 'per_channel_bolts') {
+      if (type == 'per_channel_chokdi' || type == 'per_channel_bolts') {
         _unit = 'Pcs';
       } else if (type == 'per_ft') {
         _unit = 'Ft';
@@ -209,6 +209,15 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                           _unit = 'Pcs';
                           if (_priceController.text.isEmpty) {
                             _priceController.text = '5';
+                          }
+                        });
+                      } else if (lower.contains('chokdi')) {
+                        setState(() {
+                          _category = 'Hardware';
+                          _calculationType = 'per_channel_chokdi';
+                          _unit = 'Pcs';
+                          if (_priceController.text.isEmpty) {
+                            _priceController.text = '2';
                           }
                         });
                       }
@@ -365,6 +374,12 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                           ),
                         if (!isChannel && !isWire)
                           ChoiceChip(
+                            label: const Text('Chokdi (60 / Channel)'),
+                            selected: _calculationType == 'per_channel_chokdi',
+                            onSelected: (s) => _onCalcTypeChanged('per_channel_chokdi'),
+                          ),
+                        if (!isChannel && !isWire)
+                          ChoiceChip(
                             label: const Text('Bolts (12 / Channel)'),
                             selected: _calculationType == 'per_channel_bolts',
                             onSelected: (s) => _onCalcTypeChanged('per_channel_bolts'),
@@ -390,7 +405,13 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                     );
                   },
                 ),
-                if (_calculationType == 'per_channel_bolts') ...[
+                if (_calculationType == 'per_channel_chokdi') ...[
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Chokdi are counted on channels used: 60 chokdi for each 10ft channel.',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
+                  ),
+                ] else if (_calculationType == 'per_channel_bolts') ...[
                   const SizedBox(height: 6),
                   const Text(
                     'Bolts are counted on channels used: 12 bolts for each 10ft channel.',

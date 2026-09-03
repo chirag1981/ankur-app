@@ -196,6 +196,43 @@ void main() {
       expect(totalCost, equals(120.0)); // 24 bolts * 5 Rs = 120 Rs
     });
 
+    test('Chokdi cost is calculated based on channels used with 60 chokdi per channel', () {
+      final window = WindowItem(
+        roomId: 1,
+        customerId: 1,
+        label: 'Window 1',
+        widthInches: 120.0, // 10 ft width
+        heightInches: 60.0,
+        quantity: 1,
+      );
+
+      final channelFt = window.widthFeet * 2.0 * window.quantity; // 20 ft
+      expect(channelFt, equals(20.0)); // 2 channels of 10ft
+
+      final chokdi = MaterialItem(
+        name: 'Chokdi',
+        category: 'Hardware',
+        unit: 'Pcs',
+        unitPrice: 2.0,
+        calculationType: 'per_channel_chokdi',
+      );
+
+      final effectiveQty = chokdi.getEffectiveQuantity(
+        totalSqFt: window.totalSqFt,
+        totalWindows: 1,
+        totalChannelWidthFt: channelFt,
+      );
+      final totalCost = chokdi.getTotalCost(
+        totalSqFt: window.totalSqFt,
+        totalWindows: 1,
+        totalChannelWidthFt: channelFt,
+      );
+
+      // 20 ft / 10 ft = 2 channels used -> 2 * 60 = 120 chokdi
+      expect(effectiveQty, equals(120.0));
+      expect(totalCost, equals(240.0)); // 120 chokdi * 2 Rs = 240 Rs
+    });
+
     test('CustomerEstimate aggregates multiple rooms and calculates discount properly', () {
       final customer = Customer(
         id: 1,

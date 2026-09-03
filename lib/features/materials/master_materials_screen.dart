@@ -125,6 +125,8 @@ class MasterMaterialsScreen extends ConsumerWidget {
 
   String _formatCalcType(String type) {
     switch (type) {
+      case 'per_channel_chokdi':
+        return 'Chokdi (60 / Channel)';
       case 'per_channel_bolts':
         return 'Bolts (12 / Channel)';
       case 'per_wire_meter':

@@ -647,13 +647,15 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          mat.calculationType == 'per_channel_bolts'
-                              ? 'Calculated: ${effectiveQty.toInt()} Pcs (${estimate.totalChannelsUsed} channels × 12 bolts)'
-                              : mat.calculationType == 'per_ft'
-                                  ? 'Calculated: ${effectiveQty.toStringAsFixed(1)} Ft (${(effectiveQty / 10).toStringAsFixed(1)} × 10ft channels)'
-                                  : mat.calculationType == 'per_wire_meter'
-                                      ? 'Calculated: ${effectiveQty.toStringAsFixed(1)} Meters (Sq.Ft × 2.7m)'
-                                      : 'Calculated Qty: ${effectiveQty.toStringAsFixed(2)} ${mat.unit}',
+                          mat.calculationType == 'per_channel_chokdi'
+                              ? 'Calculated: ${effectiveQty.toInt()} Pcs (${estimate.totalChannelsUsed} channels × 60 chokdi)'
+                              : mat.calculationType == 'per_channel_bolts'
+                                  ? 'Calculated: ${effectiveQty.toInt()} Pcs (${estimate.totalChannelsUsed} channels × 12 bolts)'
+                                  : mat.calculationType == 'per_ft'
+                                      ? 'Calculated: ${effectiveQty.toStringAsFixed(1)} Ft (${(effectiveQty / 10).toStringAsFixed(1)} × 10ft channels)'
+                                      : mat.calculationType == 'per_wire_meter'
+                                          ? 'Calculated: ${effectiveQty.toStringAsFixed(1)} Meters (Sq.Ft × 2.7m)'
+                                          : 'Calculated Qty: ${effectiveQty.toStringAsFixed(2)} ${mat.unit}',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
