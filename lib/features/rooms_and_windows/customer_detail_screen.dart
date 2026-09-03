@@ -230,7 +230,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
               ),
               const SizedBox(height: 8),
               const Text(
-                'Start by adding rooms (e.g. Living Room, Master Bedroom, Kitchen) and then add windows with their inch measurements.',
+                'Start by adding a room (e.g. Room 1, Room 2) and then add windows with their inch measurements.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: AppColors.textMuted),
               ),
