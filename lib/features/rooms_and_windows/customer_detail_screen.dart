@@ -187,6 +187,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
           _buildKpiItem('Rooms', estimate.totalRoomsCount.toString()),
           _buildKpiItem('Windows', '${estimate.totalWindowsCount} Units'),
           _buildKpiItem('Total Sq. Ft', estimate.totalSqFt.toStringAsFixed(2), isHighlight: true),
+          _buildKpiItem('Rate / Sq.Ft', UnitConverter.formatCurrency(estimate.effectiveRatePerSqFt), isHighlight: true),
           _buildKpiItem('Grand Total', UnitConverter.formatCurrency(estimate.grandTotal), isBold: true),
         ],
       ),
@@ -655,7 +656,9 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                                       ? 'Calculated: ${effectiveQty.toStringAsFixed(1)} Ft (${(effectiveQty / 10).toStringAsFixed(1)} × 10ft channels)'
                                       : mat.calculationType == 'per_wire_meter'
                                           ? 'Calculated: ${effectiveQty.toStringAsFixed(1)} Meters (Sq.Ft × 2.7m)'
-                                          : 'Calculated Qty: ${effectiveQty.toStringAsFixed(2)} ${mat.unit}',
+                                          : mat.calculationType == 'fixed'
+                                              ? 'Manual Rate: ${UnitConverter.formatCurrency(mat.unitPrice)}'
+                                              : 'Calculated Qty: ${effectiveQty.toStringAsFixed(2)} ${mat.unit}',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -709,21 +712,45 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.borderLight),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
             children: [
-              const Text(
-                'Total Estimated Material & Labor Cost:',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Total (Materials, Labor & Transport):',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                  ),
+                  Text(
+                    UnitConverter.formatCurrency(estimate.materialsCost),
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                UnitConverter.formatCurrency(estimate.materialsCost),
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+              if (estimate.totalSqFt > 0) ...[
+                const Divider(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Rate Per Sq. Ft (Total ÷ Sq.Ft):',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textMuted),
+                    ),
+                    Text(
+                      '${UnitConverter.formatCurrency(estimate.materialsCost / estimate.totalSqFt)} / Sq. Ft',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -960,6 +987,16 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                 fontSize: 18,
                 color: Colors.white,
               ),
+              if (estimate.totalSqFt > 0) ...[
+                const SizedBox(height: 4),
+                _buildSummaryLine(
+                  'Rate Per Sq. Ft',
+                  '${UnitConverter.formatCurrency(grandTotal / estimate.totalSqFt)} / Sq. Ft',
+                  isBold: true,
+                  fontSize: 14,
+                  color: Colors.cyanAccent,
+                ),
+              ],
               if (advanceVal > 0) ...[
                 const SizedBox(height: 6),
                 _buildSummaryLine(

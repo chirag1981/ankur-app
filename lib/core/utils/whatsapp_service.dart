@@ -45,12 +45,15 @@ class WhatsAppService {
       buffer.writeln('• GST (${estimate.customer.taxRate}%): +${UnitConverter.formatCurrency(estimate.taxAmount)}');
     }
     buffer.writeln('• *Grand Total: ${UnitConverter.formatCurrency(estimate.grandTotal)}*');
+    if (estimate.totalSqFt > 0) {
+      buffer.writeln('• *Rate / Sq.Ft: ${UnitConverter.formatCurrency(estimate.effectiveRatePerSqFt)} / Sq. Ft*');
+    }
     if (estimate.advancePaid > 0) {
       buffer.writeln('• Advance Paid: ${UnitConverter.formatCurrency(estimate.advancePaid)}');
       buffer.writeln('• *Balance Due: ${UnitConverter.formatCurrency(estimate.balanceDue)}*');
     }
     buffer.writeln('--------------------------------');
-    buffer.writeln('Detailed itemized schedule is attached in the PDF.');
+    buffer.writeln('Quotation & measurement schedule is attached in the PDF.');
     buffer.writeln('Thank you for your business!');
 
     return buffer.toString();

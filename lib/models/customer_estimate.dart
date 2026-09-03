@@ -98,6 +98,12 @@ class CustomerEstimate {
   /// Grand Total
   double get grandTotal => netAmount + taxAmount;
 
+  /// Effective rate per sq ft (Grand Total / Total Sq Ft)
+  double get effectiveRatePerSqFt {
+    if (totalSqFt <= 0) return 0.0;
+    return grandTotal / totalSqFt;
+  }
+
   /// Advance Paid
   double get advancePaid => customer.advanceAmount;
 

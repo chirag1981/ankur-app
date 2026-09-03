@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
       onOpen: (db) async {
@@ -59,6 +59,48 @@ class DatabaseHelper {
           SET unit = 'Pcs', calculation_type = 'per_channel_chokdi'
           WHERE LOWER(name) LIKE '%chokdi%' AND (calculation_type = 'per_window' OR calculation_type = 'per_sq_ft')
         ''');
+
+        // Automatically ensure Transport is available in master materials
+        final masterTransport = await db.query(
+          'materials',
+          where: 'customer_id IS NULL AND LOWER(name) LIKE ?',
+          whereArgs: ['%transport%'],
+        );
+        if (masterTransport.isEmpty) {
+          await db.insert('materials', {
+            'customer_id': null,
+            'name': 'Transport',
+            'category': 'Transport',
+            'unit': 'Trip',
+            'unit_price': 0.0,
+            'calculation_type': 'fixed',
+            'multiplier': 1.0,
+            'manual_quantity': 1.0,
+            'is_enabled': 1,
+          });
+        }
+
+        // Automatically ensure every customer has a Transport item
+        final customersWithoutTransport = await db.rawQuery('''
+          SELECT id FROM customers 
+          WHERE id NOT IN (
+            SELECT customer_id FROM materials WHERE customer_id IS NOT NULL AND LOWER(name) LIKE '%transport%'
+          )
+        ''');
+        for (final row in customersWithoutTransport) {
+          final custId = row['id'] as int;
+          await db.insert('materials', {
+            'customer_id': custId,
+            'name': 'Transport',
+            'category': 'Transport',
+            'unit': 'Trip',
+            'unit_price': 0.0,
+            'calculation_type': 'fixed',
+            'multiplier': 1.0,
+            'manual_quantity': 1.0,
+            'is_enabled': 1,
+          });
+        }
       },
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
@@ -169,6 +211,26 @@ class DatabaseHelper {
         WHERE LOWER(name) LIKE '%chokdi%'
       ''');
     }
+    if (oldVersion < 7) {
+      final masterTransport = await db.query(
+        'materials',
+        where: 'customer_id IS NULL AND LOWER(name) LIKE ?',
+        whereArgs: ['%transport%'],
+      );
+      if (masterTransport.isEmpty) {
+        await db.insert('materials', {
+          'customer_id': null,
+          'name': 'Transport',
+          'category': 'Transport',
+          'unit': 'Trip',
+          'unit_price': 0.0,
+          'calculation_type': 'fixed',
+          'multiplier': 1.0,
+          'manual_quantity': 1.0,
+          'is_enabled': 1,
+        });
+      }
+    }
   }
 
   Future<void> _seedDefaultMasterMaterials(Database db) async {
@@ -246,6 +308,17 @@ class DatabaseHelper {
         'unit': 'Sq. Ft',
         'unit_price': 20.0,
         'calculation_type': 'per_sq_ft',
+        'multiplier': 1.0,
+        'manual_quantity': 1.0,
+        'is_enabled': 1,
+      },
+      {
+        'customer_id': null,
+        'name': 'Transport',
+        'category': 'Transport',
+        'unit': 'Trip',
+        'unit_price': 0.0,
+        'calculation_type': 'fixed',
         'multiplier': 1.0,
         'manual_quantity': 1.0,
         'is_enabled': 1,

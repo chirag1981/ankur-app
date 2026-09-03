@@ -235,62 +235,13 @@ class PdfInvoiceGenerator {
             ),
             pw.SizedBox(height: 16),
 
-            // Section 2: Materials & Workmanship Breakdown
+            // Section 2: Financial Summary & Totals
             pw.Text(
-              '2. MATERIALS, HARDWARE & LABOR ESTIMATION',
+              '2. FINANCIAL SUMMARY & TOTALS',
               style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: primaryColor),
             ),
-            pw.SizedBox(height: 6),
+            pw.SizedBox(height: 8),
 
-            pw.Table(
-              border: pw.TableBorder.all(color: borderColor, width: 0.5),
-              columnWidths: const {
-                0: pw.FlexColumnWidth(3.0),
-                1: pw.FlexColumnWidth(1.5),
-                2: pw.FlexColumnWidth(1.2),
-                3: pw.FlexColumnWidth(1.2),
-                4: pw.FlexColumnWidth(1.5),
-              },
-              children: [
-                pw.TableRow(
-                  decoration: pw.BoxDecoration(color: primaryColor),
-                  children: [
-                    _buildCell('Material / Work Description', isHeader: true),
-                    _buildCell('Category', isHeader: true),
-                    _buildCell('Calculated Qty', isHeader: true, align: pw.TextAlign.center),
-                    _buildCell('Rate (INR)', isHeader: true, align: pw.TextAlign.right),
-                    _buildCell('Amount (INR)', isHeader: true, align: pw.TextAlign.right),
-                  ],
-                ),
-                for (final mat in estimate.materials.where((m) => m.isEnabled))
-                  pw.TableRow(
-                    children: [
-                      _buildCell(mat.name),
-                      _buildCell(mat.category),
-                      _buildCell(
-                        '${mat.getEffectiveQuantity(
-                          totalSqFt: estimate.totalSqFt,
-                          totalWindows: estimate.totalWindowsCount,
-                          totalChannelWidthFt: estimate.totalChannelWidthFeet,
-                        ).toStringAsFixed(2)} ${mat.unit}',
-                        align: pw.TextAlign.center,
-                      ),
-                      _buildCell('Rs. ${mat.unitPrice.toStringAsFixed(0)}', align: pw.TextAlign.right),
-                      _buildCell(
-                        'Rs. ${mat.getTotalCost(
-                          totalSqFt: estimate.totalSqFt,
-                          totalWindows: estimate.totalWindowsCount,
-                          totalChannelWidthFt: estimate.totalChannelWidthFeet,
-                        ).toStringAsFixed(2)}',
-                        align: pw.TextAlign.right,
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-            pw.SizedBox(height: 16),
-
-            // Section 3: Financial Summary & Totals
             pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
@@ -344,6 +295,13 @@ class PdfInvoiceGenerator {
                           _buildSummaryRow('GST (${estimate.customer.taxRate}%)', 'Rs. ${estimate.taxAmount.toStringAsFixed(2)}'),
                         pw.Divider(color: borderColor, thickness: 1),
                         _buildSummaryRow('Grand Total', 'Rs. ${estimate.grandTotal.toStringAsFixed(2)}', isBold: true, fontSize: 11),
+                        if (estimate.totalSqFt > 0)
+                          _buildSummaryRow(
+                            'Rate / Sq.Ft',
+                            'Rs. ${estimate.effectiveRatePerSqFt.toStringAsFixed(2)} / Sq.Ft',
+                            isBold: true,
+                            textColor: primaryColor,
+                          ),
                         if (estimate.advancePaid > 0) ...[
                           _buildSummaryRow('Advance Paid', 'Rs. ${estimate.advancePaid.toStringAsFixed(2)}', textColor: PdfColors.green700),
                           _buildSummaryRow('Balance Due', 'Rs. ${estimate.balanceDue.toStringAsFixed(2)}', isBold: true, textColor: PdfColors.red800),

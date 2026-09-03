@@ -296,8 +296,22 @@ void main() {
       expect(estimate.discountAmount, equals(320.0)); // 10% of 3200
       expect(estimate.netAmount, equals(2880.0));
       expect(estimate.grandTotal, equals(2880.0));
+      expect(estimate.effectiveRatePerSqFt, equals(90.0)); // 2880 / 32
       expect(estimate.advancePaid, equals(2000.0));
       expect(estimate.balanceDue, equals(880.0));
+    });
+
+    test('Transport material applies manual rate directly into estimate', () {
+      final transport = MaterialItem(
+        name: 'Transport',
+        category: 'Transport',
+        unit: 'Trip',
+        unitPrice: 500.0,
+        calculationType: 'fixed',
+      );
+
+      expect(transport.getEffectiveQuantity(totalSqFt: 100.0, totalWindows: 4), equals(1.0));
+      expect(transport.getTotalCost(totalSqFt: 100.0, totalWindows: 4), equals(500.0));
     });
   });
 }

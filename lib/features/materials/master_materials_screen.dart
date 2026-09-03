@@ -138,7 +138,7 @@ class MasterMaterialsScreen extends ConsumerWidget {
       case 'per_window':
         return 'Per Window Unit';
       case 'fixed':
-        return 'Fixed / Set';
+        return 'Manual Rate';
       default:
         return type;
     }

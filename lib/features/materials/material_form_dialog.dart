@@ -36,6 +36,7 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
     'Wire',
     'Hardware',
     'Labor',
+    'Transport',
     'Accessories',
     'Other',
   ];
@@ -98,7 +99,7 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
     if (_formKey.currentState!.validate()) {
       final price = double.tryParse(_priceController.text.trim()) ?? 0.0;
       final mult = double.tryParse(_multiplierController.text.trim()) ?? 1.0;
-      final manQty = double.tryParse(_manualQtyController.text.trim()) ?? 1.0;
+      final manQty = _calculationType == 'fixed' ? 1.0 : (double.tryParse(_manualQtyController.text.trim()) ?? 1.0);
 
       final material = (widget.initialMaterial ??
               MaterialItem(
@@ -220,6 +221,12 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                             _priceController.text = '2';
                           }
                         });
+                      } else if (lower.contains('transport')) {
+                        setState(() {
+                          _category = 'Transport';
+                          _calculationType = 'fixed';
+                          _unit = 'Trip';
+                        });
                       }
                     }
                   },
@@ -264,6 +271,9 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                               if (_priceController.text.isEmpty) {
                                 _priceController.text = '20';
                               }
+                            } else if (val == 'Transport') {
+                              _calculationType = 'fixed';
+                              _unit = 'Trip';
                             }
                           });
                         },
@@ -353,97 +363,111 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                 const SizedBox(height: 6),
                 Builder(
                   builder: (context) {
+                    final isTransport = _category == 'Transport' ||
+                        _nameController.text.trim().toLowerCase().contains('transport') ||
+                        _calculationType == 'fixed';
+
+                    if (isTransport) {
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.06),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          children: const [
+                            Icon(Icons.local_shipping_outlined, color: AppColors.primary, size: 22),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Transport is entered as a manual rate (₹) and added directly to the total.',
+                                style: TextStyle(fontSize: 12.5, color: AppColors.textDark, fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
                     final isChannel = _category == 'Channel' || _nameController.text.trim().toLowerCase().contains('channel');
                     final isWire = _category == 'Wire' || _nameController.text.trim().toLowerCase().contains('wire');
 
-                    return Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (!isChannel)
-                          ChoiceChip(
-                            label: const Text('Wire (Sq.Ft × 2.7m)'),
-                            selected: _calculationType == 'per_wire_meter',
-                            onSelected: (s) => _onCalcTypeChanged('per_wire_meter'),
-                          ),
-                        if (!isWire)
-                          ChoiceChip(
-                            label: const Text('In Ft (Width × 2)'),
-                            selected: _calculationType == 'per_ft',
-                            onSelected: (s) => _onCalcTypeChanged('per_ft'),
-                          ),
-                        if (!isChannel && !isWire)
-                          ChoiceChip(
-                            label: const Text('Chokdi (60 / Channel)'),
-                            selected: _calculationType == 'per_channel_chokdi',
-                            onSelected: (s) => _onCalcTypeChanged('per_channel_chokdi'),
-                          ),
-                        if (!isChannel && !isWire)
-                          ChoiceChip(
-                            label: const Text('Bolts (12 / Channel)'),
-                            selected: _calculationType == 'per_channel_bolts',
-                            onSelected: (s) => _onCalcTypeChanged('per_channel_bolts'),
-                          ),
-                        if (!isChannel && !isWire)
-                          ChoiceChip(
-                            label: const Text('Per Sq.Ft Area'),
-                            selected: _calculationType == 'per_sq_ft',
-                            onSelected: (s) => _onCalcTypeChanged('per_sq_ft'),
-                          ),
-                        if (!isChannel && !isWire)
-                          ChoiceChip(
-                            label: const Text('Per Window Unit'),
-                            selected: _calculationType == 'per_window',
-                            onSelected: (s) => _onCalcTypeChanged('per_window'),
-                          ),
-                        ChoiceChip(
-                          label: const Text('Fixed Quantity'),
-                          selected: _calculationType == 'fixed',
-                          onSelected: (s) => _onCalcTypeChanged('fixed'),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            if (!isChannel)
+                              ChoiceChip(
+                                label: const Text('Wire (Sq.Ft × 2.7m)'),
+                                selected: _calculationType == 'per_wire_meter',
+                                onSelected: (s) => _onCalcTypeChanged('per_wire_meter'),
+                              ),
+                            if (!isWire)
+                              ChoiceChip(
+                                label: const Text('In Ft (Width × 2)'),
+                                selected: _calculationType == 'per_ft',
+                                onSelected: (s) => _onCalcTypeChanged('per_ft'),
+                              ),
+                            if (!isChannel && !isWire)
+                              ChoiceChip(
+                                label: const Text('Chokdi (60 / Channel)'),
+                                selected: _calculationType == 'per_channel_chokdi',
+                                onSelected: (s) => _onCalcTypeChanged('per_channel_chokdi'),
+                              ),
+                            if (!isChannel && !isWire)
+                              ChoiceChip(
+                                label: const Text('Bolts (12 / Channel)'),
+                                selected: _calculationType == 'per_channel_bolts',
+                                onSelected: (s) => _onCalcTypeChanged('per_channel_bolts'),
+                              ),
+                            if (!isChannel && !isWire)
+                              ChoiceChip(
+                                label: const Text('Per Sq.Ft Area'),
+                                selected: _calculationType == 'per_sq_ft',
+                                onSelected: (s) => _onCalcTypeChanged('per_sq_ft'),
+                              ),
+                            if (!isChannel && !isWire)
+                              ChoiceChip(
+                                label: const Text('Per Window Unit'),
+                                selected: _calculationType == 'per_window',
+                                onSelected: (s) => _onCalcTypeChanged('per_window'),
+                              ),
+                          ],
                         ),
+                        if (_calculationType == 'per_channel_chokdi') ...[
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Chokdi are counted on channels used: 60 chokdi for each 10ft channel.',
+                            style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
+                          ),
+                        ] else if (_calculationType == 'per_channel_bolts') ...[
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Bolts are counted on channels used: 12 bolts for each 10ft channel.',
+                            style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
+                          ),
+                        ] else if (_calculationType == 'per_wire_meter') ...[
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Wire length is automatically measured as Total Sq. Ft × 2.7 meters. Rates: 2mm @ ₹9/m, 2.5mm @ ₹13/m, 3mm @ ₹16/m.',
+                            style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
+                          ),
+                        ] else if (_calculationType == 'per_ft') ...[
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Calculated on width in ft × 2 per window (top & bottom track). One 10ft channel is ₹900 (₹90/ft).',
+                            style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
+                          ),
+                        ],
                       ],
                     );
                   },
                 ),
-                if (_calculationType == 'per_channel_chokdi') ...[
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Chokdi are counted on channels used: 60 chokdi for each 10ft channel.',
-                    style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
-                  ),
-                ] else if (_calculationType == 'per_channel_bolts') ...[
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Bolts are counted on channels used: 12 bolts for each 10ft channel.',
-                    style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
-                  ),
-                ] else if (_calculationType == 'per_wire_meter') ...[
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Wire length is automatically measured as Total Sq. Ft × 2.7 meters. Rates: 2mm @ ₹9/m, 2.5mm @ ₹13/m, 3mm @ ₹16/m.',
-                    style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
-                  ),
-                ] else if (_calculationType == 'per_ft') ...[
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Calculated on width in ft × 2 per window (top & bottom track). One 10ft channel is ₹900 (₹90/ft).',
-                    style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
-                  ),
-                ],
                 const SizedBox(height: 14),
-
-                if (_calculationType == 'fixed') ...[
-                  TextFormField(
-                    controller: _manualQtyController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Fixed Quantity',
-                      hintText: '1',
-                      prefixIcon: Icon(Icons.format_list_numbered),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                ],
 
                 // Switch enabled
                 SwitchListTile(
