@@ -243,71 +243,42 @@ class PdfInvoiceGenerator {
             pw.SizedBox(height: 8),
 
             pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              mainAxisAlignment: pw.MainAxisAlignment.end,
               children: [
-                // Notes & Terms
-                pw.Expanded(
-                  flex: 3,
-                  child: pw.Container(
-                    padding: const pw.EdgeInsets.all(10),
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: borderColor),
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                    ),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('TERMS & CONDITIONS:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-                        pw.SizedBox(height: 4),
-                        pw.Text('1. 50% Advance with measurement confirmation, balance upon installation.', style: const pw.TextStyle(fontSize: 7.5)),
-                        pw.Text('2. Standard glass & aluminium fitting warranty applies.', style: const pw.TextStyle(fontSize: 7.5)),
-                        pw.Text('3. Delivery and installation within 7-10 working days.', style: const pw.TextStyle(fontSize: 7.5)),
-                        if (estimate.customer.notes.isNotEmpty) ...[
-                          pw.SizedBox(height: 4),
-                          pw.Text('Special Note: ${estimate.customer.notes}', style: pw.TextStyle(fontSize: 8, fontStyle: pw.FontStyle.italic)),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                pw.SizedBox(width: 16),
-
                 // Financial Box
-                pw.Expanded(
-                  flex: 2,
-                  child: pw.Container(
-                    padding: const pw.EdgeInsets.all(10),
-                    decoration: pw.BoxDecoration(
-                      color: neutralBg,
-                      border: pw.Border.all(color: borderColor),
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                    ),
-                    child: pw.Column(
-                      children: [
-                        _buildSummaryRow('Subtotal', 'Rs. ${estimate.subtotal.toStringAsFixed(2)}'),
-                        if (estimate.discountAmount > 0)
-                          _buildSummaryRow(
-                            'Discount (${estimate.customer.discountType == "percentage" ? "${estimate.customer.discountValue}%" : "Flat"})',
-                            '- Rs. ${estimate.discountAmount.toStringAsFixed(2)}',
-                            textColor: PdfColors.red700,
-                          ),
-                        if (estimate.taxAmount > 0)
-                          _buildSummaryRow('GST (${estimate.customer.taxRate}%)', 'Rs. ${estimate.taxAmount.toStringAsFixed(2)}'),
-                        pw.Divider(color: borderColor, thickness: 1),
-                        _buildSummaryRow('Grand Total', 'Rs. ${estimate.grandTotal.toStringAsFixed(2)}', isBold: true, fontSize: 11),
-                        if (estimate.totalSqFt > 0)
-                          _buildSummaryRow(
-                            'Rate / Sq.Ft',
-                            'Rs. ${estimate.effectiveRatePerSqFt.toStringAsFixed(2)} / Sq.Ft',
-                            isBold: true,
-                            textColor: primaryColor,
-                          ),
-                        if (estimate.advancePaid > 0) ...[
-                          _buildSummaryRow('Advance Paid', 'Rs. ${estimate.advancePaid.toStringAsFixed(2)}', textColor: PdfColors.green700),
-                          _buildSummaryRow('Balance Due', 'Rs. ${estimate.balanceDue.toStringAsFixed(2)}', isBold: true, textColor: PdfColors.red800),
-                        ],
+                pw.Container(
+                  width: 250,
+                  padding: const pw.EdgeInsets.all(10),
+                  decoration: pw.BoxDecoration(
+                    color: neutralBg,
+                    border: pw.Border.all(color: borderColor),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                  ),
+                  child: pw.Column(
+                    children: [
+                      _buildSummaryRow('Subtotal', 'Rs. ${estimate.subtotal.toStringAsFixed(2)}'),
+                      if (estimate.discountAmount > 0)
+                        _buildSummaryRow(
+                          'Discount (${estimate.customer.discountType == "percentage" ? "${estimate.customer.discountValue}%" : "Flat"})',
+                          '- Rs. ${estimate.discountAmount.toStringAsFixed(2)}',
+                          textColor: PdfColors.red700,
+                        ),
+                      if (estimate.taxAmount > 0)
+                        _buildSummaryRow('GST (${estimate.customer.taxRate}%)', 'Rs. ${estimate.taxAmount.toStringAsFixed(2)}'),
+                      pw.Divider(color: borderColor, thickness: 1),
+                      _buildSummaryRow('Grand Total', 'Rs. ${estimate.grandTotal.toStringAsFixed(2)}', isBold: true, fontSize: 11),
+                      if (estimate.totalSqFt > 0)
+                        _buildSummaryRow(
+                          'Rate / Sq.Ft',
+                          'Rs. ${estimate.effectiveRatePerSqFt.toStringAsFixed(2)} / Sq.Ft',
+                          isBold: true,
+                          textColor: primaryColor,
+                        ),
+                      if (estimate.advancePaid > 0) ...[
+                        _buildSummaryRow('Advance Paid', 'Rs. ${estimate.advancePaid.toStringAsFixed(2)}', textColor: PdfColors.green700),
+                        _buildSummaryRow('Balance Due', 'Rs. ${estimate.balanceDue.toStringAsFixed(2)}', isBold: true, textColor: PdfColors.red800),
                       ],
-                    ),
+                    ],
                   ),
                 ),
               ],
