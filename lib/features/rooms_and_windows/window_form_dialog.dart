@@ -30,17 +30,8 @@ class _WindowFormDialogState extends State<WindowFormDialog> {
   late TextEditingController _widthController;
   late TextEditingController _heightController;
 
-  String _selectedType = '3-Track Sliding';
+  String _selectedType = 'Window';
   int _quantity = 1;
-
-  final List<String> _windowTypes = [
-    '3-Track Sliding',
-    '2-Track Sliding',
-    'Casement / Openable',
-    'Fixed Glass',
-    'Ventilator / Louver',
-    'Custom Section',
-  ];
 
   @override
   void initState() {
@@ -183,34 +174,6 @@ class _WindowFormDialogState extends State<WindowFormDialog> {
                   },
                 ),
                 const SizedBox(height: 14),
-
-                // Window Type Selector
-                const Text(
-                  'Window Track & System Type:',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textMuted),
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: _windowTypes.map((type) {
-                    final selected = _selectedType == type;
-                    return ChoiceChip(
-                      label: Text(type),
-                      selected: selected,
-                      selectedColor: AppColors.primary,
-                      labelStyle: TextStyle(
-                        color: selected ? Colors.white : AppColors.textDark,
-                        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                        fontSize: 12,
-                      ),
-                      onSelected: (val) {
-                        if (val) setState(() => _selectedType = type);
-                      },
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 16),
 
                 // Dimensions Input (Inches)
                 Row(

@@ -237,8 +237,8 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 icon: const Icon(Icons.add),
-                label: const Text('Add First Room'),
-                onPressed: () => _showAddRoomDialog(estimate.customer.id!),
+                label: const Text('Add Room'),
+                onPressed: () => _showAddRoomDialog(estimate.customer.id!, defaultIndex: 1),
               ),
             ],
           ),
@@ -260,7 +260,10 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
             TextButton.icon(
               icon: const Icon(Icons.add, size: 18),
               label: const Text('Add Room'),
-              onPressed: () => _showAddRoomDialog(estimate.customer.id!),
+              onPressed: () => _showAddRoomDialog(
+                estimate.customer.id!,
+                defaultIndex: estimate.rooms.length + 1,
+              ),
             ),
           ],
         ),
@@ -316,8 +319,8 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                   ],
                 ),
                 subtitle: Text(
-                  '$roomWinCount Windows • ${room.notes.isNotEmpty ? room.notes : "Tap to manage windows"}',
-                  style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                  '$roomWinCount Windows',
+                  style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
                 ),
                 trailing: PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, size: 20),
@@ -352,13 +355,17 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                         child: Column(
                           children: [
                             const Text(
-                              'No windows added to this room yet.',
+                              'No windows added yet.',
                               style: TextStyle(color: AppColors.textMuted, fontSize: 13),
                             ),
-                            const SizedBox(height: 8),
-                            OutlinedButton.icon(
-                              icon: const Icon(Icons.add, size: 16),
-                              label: const Text('Add Window to Room'),
+                            const SizedBox(height: 10),
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Add Window'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                              ),
                               onPressed: () => _showAddWindowDialog(
                                 roomId: room.id!,
                                 customerId: estimate.customer.id!,
@@ -381,14 +388,16 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                         return _buildWindowListTile(win, room, controller);
                       },
                     ),
-                    // Add Another Window in this room button
+                    // Add Window button under room
                     Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.add, size: 16),
-                        label: Text('Add Another Window in ${room.name}'),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(40),
+                      padding: const EdgeInsets.all(12),
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Add Window'),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(42),
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
                         ),
                         onPressed: () => _showAddWindowDialog(
                           roomId: room.id!,
@@ -429,30 +438,17 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: Text(
-              win.windowType,
-              style: const TextStyle(fontSize: 10, color: AppColors.textDark),
-            ),
-          ),
           if (win.quantity > 1) ...[
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: AppColors.primary,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 'Qty: ${win.quantity}',
-                style: const TextStyle(fontSize: 9.5, color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -1046,12 +1042,13 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
   // ==========================================
   // ACTIONS & DIALOGS
   // ==========================================
-  void _showAddRoomDialog(int customerId) {
+  void _showAddRoomDialog(int customerId, {int defaultIndex = 1}) {
     final controller = ref.read(customerControllerProvider);
     showDialog(
       context: context,
       builder: (_) => RoomFormDialog(
         customerId: customerId,
+        defaultRoomIndex: defaultIndex,
         onSave: (room) => controller.addRoom(
           customerId: customerId,
           name: room.name,
