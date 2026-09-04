@@ -405,5 +405,30 @@ void main() {
       expect(estimate.materialsCost, equals(900.0)); // 250 + 150 + 500
       expect(estimate.baseCost, equals(900.0));
     });
+
+    test('Bolt and Chokdi support manual quantity entry accurately', () {
+      final manualBolt = MaterialItem(
+        name: 'Bolt',
+        category: 'Hardware',
+        unit: 'Pcs',
+        unitPrice: 5.0,
+        calculationType: 'manual_qty',
+        manualQuantity: 40.0,
+      );
+      final manualChokdi = MaterialItem(
+        name: 'Chokdi',
+        category: 'Hardware',
+        unit: 'Pcs',
+        unitPrice: 2.0,
+        calculationType: 'manual_qty',
+        manualQuantity: 150.0,
+      );
+
+      expect(manualBolt.getEffectiveQuantity(totalSqFt: 100.0, totalWindows: 2), equals(40.0));
+      expect(manualBolt.getTotalCost(totalSqFt: 100.0, totalWindows: 2), equals(200.0)); // 40 * 5 = 200
+
+      expect(manualChokdi.getEffectiveQuantity(totalSqFt: 100.0, totalWindows: 2), equals(150.0));
+      expect(manualChokdi.getTotalCost(totalSqFt: 100.0, totalWindows: 2), equals(300.0)); // 150 * 2 = 300
+    });
   });
 }

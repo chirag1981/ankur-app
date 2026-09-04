@@ -47,13 +47,17 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
     final init = widget.initialMaterial;
     _nameController = TextEditingController(text: init?.name ?? '');
     _priceController = TextEditingController(
-      text: init != null && init.unitPrice > 0 ? init.unitPrice.toStringAsFixed(0) : '',
+      text: init != null && init.unitPrice > 0
+          ? (init.unitPrice % 1 == 0 ? init.unitPrice.toInt().toString() : init.unitPrice.toString())
+          : '',
     );
     _multiplierController = TextEditingController(
       text: (init?.multiplier ?? 1.0).toString(),
     );
     _manualQtyController = TextEditingController(
-      text: (init?.manualQuantity ?? 1.0).toString(),
+      text: init != null && init.manualQuantity > 0 && init.calculationType == 'manual_qty'
+          ? (init.manualQuantity % 1 == 0 ? init.manualQuantity.toInt().toString() : init.manualQuantity.toString())
+          : '',
     );
 
     _category = init?.category ?? 'Channel';
@@ -62,6 +66,15 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
     if (_category == 'Channel' && (_calculationType == 'per_sq_ft' || _calculationType == 'per_window')) {
       _calculationType = 'per_ft';
       _unit = 'Ft';
+    }
+    final initNameLower = (init?.name ?? '').toLowerCase();
+    if (initNameLower.contains('bolt') && (_calculationType == 'per_sq_ft' || _calculationType == 'per_window')) {
+      _calculationType = 'per_channel_bolts';
+      _unit = 'Pcs';
+    }
+    if (initNameLower.contains('chokdi') && (_calculationType == 'per_sq_ft' || _calculationType == 'per_window')) {
+      _calculationType = 'per_channel_chokdi';
+      _unit = 'Pcs';
     }
     _isEnabled = init?.isEnabled ?? true;
   }
@@ -79,7 +92,7 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
     if (type == null) return;
     setState(() {
       _calculationType = type;
-      if (type == 'per_channel_chokdi' || type == 'per_channel_bolts') {
+      if (type == 'per_channel_chokdi' || type == 'per_channel_bolts' || type == 'manual_qty') {
         _unit = 'Pcs';
       } else if (type == 'per_ft') {
         _unit = 'Ft';
@@ -94,6 +107,17 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
       } else {
         _unit = 'Units / Set';
       }
+
+      if (type == 'manual_qty' && _manualQtyController.text.trim().isEmpty) {
+        final lower = _nameController.text.toLowerCase();
+        if (lower.contains('bolt')) {
+          _manualQtyController.text = '12';
+        } else if (lower.contains('chokdi')) {
+          _manualQtyController.text = '60';
+        } else {
+          _manualQtyController.text = '1';
+        }
+      }
     });
   }
 
@@ -101,7 +125,11 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
     if (_formKey.currentState!.validate()) {
       final price = double.tryParse(_priceController.text.trim()) ?? 0.0;
       final mult = double.tryParse(_multiplierController.text.trim()) ?? 1.0;
-      final manQty = _calculationType == 'fixed' ? 1.0 : (double.tryParse(_manualQtyController.text.trim()) ?? 1.0);
+      final manQty = _calculationType == 'fixed'
+          ? 1.0
+          : (_calculationType == 'manual_qty'
+              ? (double.tryParse(_manualQtyController.text.trim()) ?? 1.0)
+              : 1.0);
 
       final material = (widget.initialMaterial ??
               MaterialItem(
@@ -258,6 +286,7 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
+                        isExpanded: true,
                         value: _category,
                         decoration: const InputDecoration(labelText: 'Category'),
                         items: _categories
@@ -413,9 +442,171 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                       );
                     }
 
-                    final isChannel = _category == 'Channel' || _nameController.text.trim().toLowerCase().contains('channel');
-                    final isWire = _category == 'Wire' || _nameController.text.trim().toLowerCase().contains('wire');
+                    final nameLower = _nameController.text.trim().toLowerCase();
+                    final isBolt = nameLower.contains('bolt') || _calculationType == 'per_channel_bolts';
+                    final isChokdi = nameLower.contains('chokdi') || _calculationType == 'per_channel_chokdi';
+                    final isChannel = _category == 'Channel' || nameLower.contains('channel');
+                    final isWire = _category == 'Wire' || nameLower.contains('wire');
 
+                    // 1. BOLT SPECIFIC OPTIONS
+                    if (isBolt) {
+                      final parsedPrice = double.tryParse(_priceController.text.trim()) ?? 0.0;
+                      final parsedQty = double.tryParse(_manualQtyController.text.trim()) ?? 0.0;
+                      final totalCost = parsedQty * parsedPrice;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ChoiceChip(
+                                label: const Text('Bolts (12 / Channel)'),
+                                selected: _calculationType == 'per_channel_bolts',
+                                onSelected: (s) => _onCalcTypeChanged('per_channel_bolts'),
+                              ),
+                              ChoiceChip(
+                                label: const Text('Manual Quantity (Pcs)'),
+                                selected: _calculationType == 'manual_qty',
+                                onSelected: (s) => _onCalcTypeChanged('manual_qty'),
+                              ),
+                            ],
+                          ),
+                          if (_calculationType == 'per_channel_bolts') ...[
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Bolts are automatically counted: 12 bolts for each 10ft channel.',
+                              style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
+                            ),
+                          ] else if (_calculationType == 'manual_qty') ...[
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _manualQtyController,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(
+                                labelText: 'Bolt Quantity (Pcs) *',
+                                hintText: 'Enter total number of bolts (e.g. 24 or 48)',
+                                prefixIcon: Icon(Icons.pin_outlined),
+                                suffixText: 'Pcs',
+                              ),
+                              validator: (val) {
+                                if (_calculationType == 'manual_qty') {
+                                  final v = double.tryParse(val ?? '');
+                                  if (v == null || v <= 0) return 'Please enter a valid bolt quantity';
+                                }
+                                return null;
+                              },
+                              onChanged: (_) => setState(() {}),
+                            ),
+                            if (parsedQty > 0 && parsedPrice > 0) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.06),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Cost: ${parsedQty.toInt()} Pcs × ₹$parsedPrice',
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                                    ),
+                                    Text(
+                                      '₹${totalCost.toStringAsFixed(2)}',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ],
+                      );
+                    }
+
+                    // 2. CHOKDI SPECIFIC OPTIONS
+                    if (isChokdi) {
+                      final parsedPrice = double.tryParse(_priceController.text.trim()) ?? 0.0;
+                      final parsedQty = double.tryParse(_manualQtyController.text.trim()) ?? 0.0;
+                      final totalCost = parsedQty * parsedPrice;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ChoiceChip(
+                                label: const Text('Chokdi (60 / Channel)'),
+                                selected: _calculationType == 'per_channel_chokdi',
+                                onSelected: (s) => _onCalcTypeChanged('per_channel_chokdi'),
+                              ),
+                              ChoiceChip(
+                                label: const Text('Manual Quantity (Pcs)'),
+                                selected: _calculationType == 'manual_qty',
+                                onSelected: (s) => _onCalcTypeChanged('manual_qty'),
+                              ),
+                            ],
+                          ),
+                          if (_calculationType == 'per_channel_chokdi') ...[
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Chokdi are automatically counted: 60 chokdi for each 10ft channel.',
+                              style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
+                            ),
+                          ] else if (_calculationType == 'manual_qty') ...[
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _manualQtyController,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(
+                                labelText: 'Chokdi Quantity (Pcs) *',
+                                hintText: 'Enter total number of chokdi (e.g. 60 or 120)',
+                                prefixIcon: Icon(Icons.pin_outlined),
+                                suffixText: 'Pcs',
+                              ),
+                              validator: (val) {
+                                if (_calculationType == 'manual_qty') {
+                                  final v = double.tryParse(val ?? '');
+                                  if (v == null || v <= 0) return 'Please enter a valid chokdi quantity';
+                                }
+                                return null;
+                              },
+                              onChanged: (_) => setState(() {}),
+                            ),
+                            if (parsedQty > 0 && parsedPrice > 0) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.06),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Cost: ${parsedQty.toInt()} Pcs × ₹$parsedPrice',
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                                    ),
+                                    Text(
+                                      '₹${totalCost.toStringAsFixed(2)}',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ],
+                      );
+                    }
+
+                    // 3. OTHER MATERIALS OPTIONS
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -423,57 +614,38 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            if (!isChannel)
+                            if (isWire)
                               ChoiceChip(
                                 label: const Text('Wire (Sq.Ft × 2.7m)'),
                                 selected: _calculationType == 'per_wire_meter',
                                 onSelected: (s) => _onCalcTypeChanged('per_wire_meter'),
                               ),
-                            if (!isWire)
+                            if (isChannel)
                               ChoiceChip(
                                 label: const Text('In Ft (Width × 2)'),
                                 selected: _calculationType == 'per_ft',
                                 onSelected: (s) => _onCalcTypeChanged('per_ft'),
                               ),
-                            if (!isChannel && !isWire)
-                              ChoiceChip(
-                                label: const Text('Chokdi (60 / Channel)'),
-                                selected: _calculationType == 'per_channel_chokdi',
-                                onSelected: (s) => _onCalcTypeChanged('per_channel_chokdi'),
-                              ),
-                            if (!isChannel && !isWire)
-                              ChoiceChip(
-                                label: const Text('Bolts (12 / Channel)'),
-                                selected: _calculationType == 'per_channel_bolts',
-                                onSelected: (s) => _onCalcTypeChanged('per_channel_bolts'),
-                              ),
-                            if (!isChannel && !isWire)
+                            if (!isChannel && !isWire) ...[
                               ChoiceChip(
                                 label: const Text('Per Sq.Ft Area'),
                                 selected: _calculationType == 'per_sq_ft',
                                 onSelected: (s) => _onCalcTypeChanged('per_sq_ft'),
                               ),
-                            if (!isChannel && !isWire)
                               ChoiceChip(
                                 label: const Text('Per Window Unit'),
                                 selected: _calculationType == 'per_window',
                                 onSelected: (s) => _onCalcTypeChanged('per_window'),
                               ),
+                              ChoiceChip(
+                                label: const Text('Manual Quantity'),
+                                selected: _calculationType == 'manual_qty',
+                                onSelected: (s) => _onCalcTypeChanged('manual_qty'),
+                              ),
+                            ],
                           ],
                         ),
-                        if (_calculationType == 'per_channel_chokdi') ...[
-                          const SizedBox(height: 6),
-                          const Text(
-                            'Chokdi are counted on channels used: 60 chokdi for each 10ft channel.',
-                            style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
-                          ),
-                        ] else if (_calculationType == 'per_channel_bolts') ...[
-                          const SizedBox(height: 6),
-                          const Text(
-                            'Bolts are counted on channels used: 12 bolts for each 10ft channel.',
-                            style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
-                          ),
-                        ] else if (_calculationType == 'per_wire_meter') ...[
+                        if (_calculationType == 'per_wire_meter') ...[
                           const SizedBox(height: 6),
                           const Text(
                             'Wire length is automatically measured as Total Sq. Ft × 2.7 meters. Rates: 2mm @ ₹9/m, 2.5mm @ ₹13/m, 3mm @ ₹16/m.',
@@ -484,6 +656,26 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                           const Text(
                             'Calculated on width in ft × 2 per window (top & bottom track). One 10ft channel is ₹900 (₹90/ft).',
                             style: TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w500),
+                          ),
+                        ] else if (_calculationType == 'manual_qty') ...[
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _manualQtyController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: InputDecoration(
+                              labelText: 'Quantity ($_unit) *',
+                              hintText: 'Enter quantity',
+                              prefixIcon: const Icon(Icons.pin_outlined),
+                              suffixText: _unit,
+                            ),
+                            validator: (val) {
+                              if (_calculationType == 'manual_qty') {
+                                final v = double.tryParse(val ?? '');
+                                if (v == null || v <= 0) return 'Please enter a valid quantity';
+                              }
+                              return null;
+                            },
+                            onChanged: (_) => setState(() {}),
                           ),
                         ],
                       ],

@@ -45,6 +45,7 @@ class MaterialItem {
         return totalSqFt * multiplier;
       case 'per_window':
         return totalWindows * multiplier;
+      case 'manual_qty':
       case 'fixed':
       default:
         return manualQuantity;
