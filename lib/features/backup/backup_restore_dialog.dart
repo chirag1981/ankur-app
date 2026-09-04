@@ -119,7 +119,7 @@ class _BackupRestoreDialogState extends ConsumerState<BackupRestoreDialog> {
   // IMPORT & RESTORE
   Future<void> _importAndRestore() async {
     try {
-      final result = await FilePicker.pickFiles(
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.any,
         allowMultiple: false,
       );
