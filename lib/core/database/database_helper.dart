@@ -1,4 +1,7 @@
+import 'dart:io';
+import 'package:intl/intl.dart';
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../models/models.dart';
 
@@ -787,5 +790,121 @@ class DatabaseHelper {
       profile.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  // ==========================================
+  // BACKUP & RESTORE
+  // ==========================================
+
+  Future<String> getDatabaseFilePath() async {
+    final dbPath = await getDatabasesPath();
+    return join(dbPath, 'invisible_grills.db');
+  }
+
+  Future<Map<String, dynamic>> getDatabaseStats() async {
+    final db = await database;
+    final customerCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM customers')) ?? 0;
+    final roomCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM rooms')) ?? 0;
+    final windowCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM windows')) ?? 0;
+    final materialCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM materials WHERE customer_id IS NULL')) ?? 0;
+
+    final dbFile = File(await getDatabaseFilePath());
+    final sizeInBytes = await dbFile.exists() ? await dbFile.length() : 0;
+    final lastModified = await dbFile.exists() ? await dbFile.lastModified() : DateTime.now();
+
+    return {
+      'customers': customerCount,
+      'rooms': roomCount,
+      'windows': windowCount,
+      'materials': materialCount,
+      'fileSize': sizeInBytes,
+      'lastModified': lastModified,
+    };
+  }
+
+  Future<File> createBackupFile() async {
+    final db = await database;
+    try {
+      await db.rawQuery('PRAGMA wal_checkpoint(FULL)');
+    } catch (_) {}
+
+    final dbPath = await getDatabaseFilePath();
+    final dbFile = File(dbPath);
+    if (!await dbFile.exists()) {
+      throw Exception('Database file not found at $dbPath');
+    }
+
+    final tempDir = await getTemporaryDirectory();
+    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final backupFileName = 'InvisibleGrills_Backup_$timestamp.db';
+    final backupFile = File(join(tempDir.path, backupFileName));
+
+    await dbFile.copy(backupFile.path);
+    return backupFile;
+  }
+
+  Future<String> saveBackupToDownloads() async {
+    final backupFile = await createBackupFile();
+    final fileName = basename(backupFile.path);
+
+    final downloadsDir = Directory('/storage/emulated/0/Download');
+    if (await downloadsDir.exists()) {
+      final destFile = File(join(downloadsDir.path, fileName));
+      await backupFile.copy(destFile.path);
+      return destFile.path;
+    }
+
+    final docsDir = await getApplicationDocumentsDirectory();
+    final destFile = File(join(docsDir.path, fileName));
+    await backupFile.copy(destFile.path);
+    return destFile.path;
+  }
+
+  Future<Map<String, dynamic>> restoreFromBackup(String sourceFilePath) async {
+    final sourceFile = File(sourceFilePath);
+    if (!await sourceFile.exists()) {
+      throw Exception('Selected backup file does not exist.');
+    }
+
+    Database? testDb;
+    int customerCount = 0;
+    int materialCount = 0;
+    try {
+      testDb = await openReadOnlyDatabase(sourceFilePath);
+      final tables = await testDb.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('customers', 'materials')",
+      );
+      if (tables.length < 2) {
+        throw Exception('Invalid backup: Essential tables (customers, materials) are missing.');
+      }
+      customerCount = Sqflite.firstIntValue(await testDb.rawQuery('SELECT COUNT(*) FROM customers')) ?? 0;
+      materialCount = Sqflite.firstIntValue(await testDb.rawQuery('SELECT COUNT(*) FROM materials')) ?? 0;
+    } catch (e) {
+      throw Exception('Failed to validate backup file: $e');
+    } finally {
+      if (testDb != null && testDb.isOpen) {
+        await testDb.close();
+      }
+    }
+
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
+    }
+
+    final dbPath = await getDatabaseFilePath();
+    final walFile = File('$dbPath-wal');
+    final shmFile = File('$dbPath-shm');
+    if (await walFile.exists()) await walFile.delete();
+    if (await shmFile.exists()) await shmFile.delete();
+
+    await sourceFile.copy(dbPath);
+
+    _database = await _initDB('invisible_grills.db');
+
+    return {
+      'customers': customerCount,
+      'materials': materialCount,
+    };
   }
 }

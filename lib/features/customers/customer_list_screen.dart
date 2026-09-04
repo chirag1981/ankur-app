@@ -9,6 +9,7 @@ import '../rooms_and_windows/customer_detail_screen.dart';
 import 'customer_form_dialog.dart';
 
 import '../company/company_profile_dialog.dart';
+import '../backup/backup_restore_dialog.dart';
 import '../../core/database/database_helper.dart';
 
 class CustomerListScreen extends ConsumerStatefulWidget {
@@ -65,6 +66,16 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const MasterMaterialsScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.cloud_sync_outlined),
+            tooltip: 'Backup & Restore (Google Drive / WhatsApp)',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (_) => const BackupRestoreDialog(),
               );
             },
           ),

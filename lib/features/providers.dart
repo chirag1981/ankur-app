@@ -44,6 +44,12 @@ class CustomerController {
 
   CustomerController(this.ref);
 
+  void refreshAllData() {
+    ref.invalidate(customerListProvider);
+    ref.invalidate(masterMaterialsProvider);
+    ref.invalidate(companyProfileProvider);
+  }
+
   Future<void> updateCompanyProfile(CompanyProfile profile) async {
     await _db.updateCompanyProfile(profile);
     ref.invalidate(companyProfileProvider);
