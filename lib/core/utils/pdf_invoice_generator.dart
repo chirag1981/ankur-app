@@ -1,10 +1,11 @@
 import 'dart:io';
+import 'package:flutter/services.dart' show rootBundle, ByteData, Uint8List;
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import '../../core/database/database_helper.dart';
 import '../../models/models.dart';
-import 'unit_converter.dart';
 
 class PdfInvoiceGenerator {
   PdfInvoiceGenerator._();
@@ -12,6 +13,8 @@ class PdfInvoiceGenerator {
   static Future<File> generateEstimatePdf({
     required CustomerEstimate estimate,
     bool isInvoice = false,
+    String wireOption = 'both', // '2mm', '2.5mm', or 'both'
+    CompanyProfile? companyProfile,
   }) async {
     final pdf = pw.Document();
 
@@ -19,11 +22,22 @@ class PdfInvoiceGenerator {
     final invoiceNumber = 'IG-${estimate.customer.id.toString().padLeft(4, '0')}';
     final docTitle = isInvoice ? 'TAX INVOICE' : 'QUOTATION / ESTIMATE';
 
+    // Fetch company profile if not provided
+    final company = companyProfile ?? await DatabaseHelper.instance.getCompanyProfile();
+
     // Color Palette for PDF
     final primaryColor = PdfColor.fromHex('#0F2744');
     final secondaryColor = PdfColor.fromHex('#0284C7');
     final neutralBg = PdfColor.fromHex('#F8FAFC');
     final borderColor = PdfColor.fromHex('#CBD5E1');
+
+    // Attempt to load official logo
+    pw.MemoryImage? logoImage;
+    try {
+      final ByteData data = await rootBundle.load('assets/images/logo.png');
+      final Uint8List bytes = data.buffer.asUint8List();
+      logoImage = pw.MemoryImage(bytes);
+    } catch (_) {}
 
     pdf.addPage(
       pw.MultiPage(
@@ -36,31 +50,50 @@ class PdfInvoiceGenerator {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
                     children: [
-                      pw.Text(
-                        'INVISIBLE GRILLS',
-                        style: pw.TextStyle(
-                          fontSize: 20,
-                          fontWeight: pw.FontWeight.bold,
-                          color: primaryColor,
+                      if (logoImage != null) ...[
+                        pw.Container(
+                          width: 80,
+                          height: 50,
+                          child: pw.Image(logoImage, fit: pw.BoxFit.contain),
                         ),
-                      ),
-                      pw.SizedBox(height: 2),
-                      pw.Text(
-                        'Premium Invisible Grills, Balcony & Window Safety Solutions',
-                        style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
-                      ),
-                      pw.SizedBox(height: 3),
-                      pw.Text(
-                        'Phone: +91 98765 43210 | Email: contact@invisiblegrills.com',
-                        style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
+                        pw.SizedBox(width: 10),
+                      ],
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            company.companyName.toUpperCase(),
+                            style: pw.TextStyle(
+                              fontSize: 16,
+                              fontWeight: pw.FontWeight.bold,
+                              color: primaryColor,
+                            ),
+                          ),
+                          if (company.tagline.isNotEmpty)
+                            pw.Text(
+                              company.tagline,
+                              style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
+                            ),
+                          pw.SizedBox(height: 2),
+                          if (company.phone.isNotEmpty || company.email.isNotEmpty)
+                            pw.Text(
+                              'Phone: ${company.phone} ${company.email.isNotEmpty ? "| Email: ${company.email}" : ""}',
+                              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey800),
+                            ),
+                          if (company.instagramId.isNotEmpty || company.facebookId.isNotEmpty)
+                            pw.Text(
+                              '${company.instagramId.isNotEmpty ? "Instagram: ${company.instagramId}" : ""} ${company.facebookId.isNotEmpty ? "| Facebook: ${company.facebookId}" : ""}',
+                              style: pw.TextStyle(fontSize: 7.5, color: secondaryColor, fontWeight: pw.FontWeight.bold),
+                            ),
+                        ],
                       ),
                     ],
                   ),
                   pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: pw.BoxDecoration(
                       color: primaryColor,
                       borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
@@ -71,7 +104,7 @@ class PdfInvoiceGenerator {
                         pw.Text(
                           docTitle,
                           style: pw.TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: pw.FontWeight.bold,
                             color: PdfColors.white,
                           ),
@@ -79,26 +112,29 @@ class PdfInvoiceGenerator {
                         pw.SizedBox(height: 2),
                         pw.Text(
                           'Ref: $invoiceNumber',
-                          style: const pw.TextStyle(fontSize: 9, color: PdfColors.white),
+                          style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.white),
                         ),
                         pw.Text(
                           'Date: ${dateFormat.format(estimate.customer.createdAt)}',
-                          style: const pw.TextStyle(fontSize: 9, color: PdfColors.white),
+                          style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.white),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              pw.SizedBox(height: 12),
-              pw.Divider(color: secondaryColor, thickness: 1.5),
               pw.SizedBox(height: 10),
+              pw.Divider(color: secondaryColor, thickness: 1.5),
+              pw.SizedBox(height: 8),
             ],
           );
         },
         build: (pw.Context context) {
+          final est2mm = estimate.withWireThickness('2mm');
+          final est25mm = estimate.withWireThickness('2.5mm');
+
           return [
-            // Bill To Section
+            // Customer Details Section
             pw.Container(
               padding: const pw.EdgeInsets.all(10),
               decoration: pw.BoxDecoration(
@@ -155,9 +191,8 @@ class PdfInvoiceGenerator {
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text('Total Rooms: ${estimate.totalRoomsCount}', style: const pw.TextStyle(fontSize: 9)),
-                        pw.Text('Total Windows: ${estimate.totalWindowsCount}', style: const pw.TextStyle(fontSize: 9)),
                         pw.Text(
-                          'Total Area: ${estimate.totalSqFt.toStringAsFixed(2)} Sq. Ft',
+                          'Total Windows: ${estimate.totalWindowsCount} Units',
                           style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: primaryColor),
                         ),
                       ],
@@ -166,124 +201,306 @@ class PdfInvoiceGenerator {
                 ],
               ),
             ),
-            pw.SizedBox(height: 16),
+            pw.SizedBox(height: 14),
 
-            // Section 1: Window Dimensions & Area Schedule
+            // Section 1: Windows Measurement & Area Schedule (Only Window and Count, clean format)
             pw.Text(
               '1. WINDOWS MEASUREMENT & AREA SCHEDULE',
-              style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: primaryColor),
+              style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: primaryColor),
             ),
             pw.SizedBox(height: 6),
 
             pw.Table(
               border: pw.TableBorder.all(color: borderColor, width: 0.5),
               columnWidths: const {
-                0: pw.FlexColumnWidth(2.2),
-                1: pw.FlexColumnWidth(2.0),
-                2: pw.FlexColumnWidth(1.8),
-                3: pw.FlexColumnWidth(1.8),
-                4: pw.FlexColumnWidth(0.8),
-                5: pw.FlexColumnWidth(1.4),
+                0: pw.FlexColumnWidth(0.8), // Sr.
+                1: pw.FlexColumnWidth(3.0), // Room / Location
+                2: pw.FlexColumnWidth(3.5), // Window
+                3: pw.FlexColumnWidth(1.5), // Count
               },
               children: [
                 // Header Row
                 pw.TableRow(
                   decoration: pw.BoxDecoration(color: primaryColor),
                   children: [
-                    _buildCell('Room', isHeader: true),
-                    _buildCell('Window & Type', isHeader: true),
-                    _buildCell('Size (Inches)', isHeader: true, align: pw.TextAlign.center),
-                    _buildCell('Size (Feet)', isHeader: true, align: pw.TextAlign.center),
-                    _buildCell('Qty', isHeader: true, align: pw.TextAlign.center),
-                    _buildCell('Total Sq.Ft', isHeader: true, align: pw.TextAlign.right),
+                    _buildCell('Sr.', isHeader: true, align: pw.TextAlign.center),
+                    _buildCell('Room / Location', isHeader: true),
+                    _buildCell('Window', isHeader: true),
+                    _buildCell('Count (Units)', isHeader: true, align: pw.TextAlign.center),
                   ],
                 ),
-                // Data Rows grouped by Room
-                for (final room in estimate.rooms) ...[
-                  for (final win in (estimate.windowsByRoom[room.id] ?? []))
-                    pw.TableRow(
-                      decoration: const pw.BoxDecoration(color: PdfColors.white),
-                      children: [
-                        _buildCell(room.name),
-                        _buildCell('${win.label} (${win.windowType})'),
-                        _buildCell(
-                          '${UnitConverter.formatInches(win.widthInches)} x ${UnitConverter.formatInches(win.heightInches)}',
-                          align: pw.TextAlign.center,
+                // Data Rows
+                ...(() {
+                  int srNo = 1;
+                  final rows = <pw.TableRow>[];
+                  for (final room in estimate.rooms) {
+                    final winList = estimate.windowsByRoom[room.id] ?? [];
+                    for (final win in winList) {
+                      rows.add(
+                        pw.TableRow(
+                          decoration: const pw.BoxDecoration(color: PdfColors.white),
+                          children: [
+                            _buildCell('$srNo', align: pw.TextAlign.center),
+                            _buildCell(room.name),
+                            _buildCell(win.label), // Excludes (3-Track Sliding)
+                            _buildCell('${win.quantity} Unit${win.quantity > 1 ? "s" : ""}', align: pw.TextAlign.center),
+                          ],
                         ),
-                        _buildCell(
-                          '${win.widthFeet.toStringAsFixed(2)} x ${win.heightFeet.toStringAsFixed(2)} ft',
-                          align: pw.TextAlign.center,
-                        ),
-                        _buildCell('${win.quantity}', align: pw.TextAlign.center),
-                        _buildCell('${win.totalSqFt.toStringAsFixed(2)} sq.ft', align: pw.TextAlign.right),
-                      ],
-                    ),
-                ],
-                // Measurement Total Row
+                      );
+                      srNo++;
+                    }
+                  }
+                  return rows;
+                })(),
+                // Schedule Total Row
                 pw.TableRow(
                   decoration: pw.BoxDecoration(color: neutralBg),
                   children: [
-                    _buildCell('TOTAL AREA', isHeader: true, color: PdfColors.black),
-                    _buildCell(''),
-                    _buildCell(''),
-                    _buildCell(''),
-                    _buildCell('${estimate.totalWindowsCount} Units', isHeader: true, color: PdfColors.black, align: pw.TextAlign.center),
-                    _buildCell('${estimate.totalSqFt.toStringAsFixed(2)} Sq.Ft', isHeader: true, color: primaryColor, align: pw.TextAlign.right),
+                    _buildCell('TOTAL', isHeader: true, color: PdfColors.black, align: pw.TextAlign.center),
+                    _buildCell('${estimate.totalRoomsCount} Rooms', isHeader: true, color: PdfColors.black),
+                    _buildCell('Total Windows', isHeader: true, color: PdfColors.black),
+                    _buildCell('${estimate.totalWindowsCount} Units', isHeader: true, color: primaryColor, align: pw.TextAlign.center),
                   ],
                 ),
               ],
             ),
             pw.SizedBox(height: 16),
 
-            // Section 2: Financial Summary & Totals
+            // Section 2: Financial Summary & Quotation Options
             pw.Text(
-              '2. FINANCIAL SUMMARY & TOTALS',
-              style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: primaryColor),
+              '2. FINANCIAL SUMMARY & QUOTATION OPTIONS',
+              style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: primaryColor),
             ),
             pw.SizedBox(height: 8),
 
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.end,
-              children: [
-                // Financial Box
-                pw.Container(
-                  width: 250,
-                  padding: const pw.EdgeInsets.all(10),
-                  decoration: pw.BoxDecoration(
-                    color: neutralBg,
-                    border: pw.Border.all(color: borderColor),
-                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+            if (wireOption == 'both') ...[
+              // DUAL QUOTE OPTIONS COMPARISON (2.0mm vs 2.5mm)
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  // Option 1: 2.0 mm Wire
+                  pw.Expanded(
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.all(10),
+                      margin: const pw.EdgeInsets.only(right: 5),
+                      decoration: pw.BoxDecoration(
+                        color: neutralBg,
+                        border: pw.Border.all(color: borderColor),
+                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Container(
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: pw.BoxDecoration(
+                              color: secondaryColor,
+                              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                            ),
+                            child: pw.Text(
+                              'OPTION 1: WITH 2.0 MM WIRE',
+                              style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                            ),
+                          ),
+                          pw.SizedBox(height: 6),
+                          _buildSummaryRow('Material & Work Subtotal', 'Rs. ${est2mm.subtotal.toStringAsFixed(2)}'),
+                          if (est2mm.discountAmount > 0)
+                            _buildSummaryRow(
+                              'Discount',
+                              '- Rs. ${est2mm.discountAmount.toStringAsFixed(2)}',
+                              textColor: PdfColors.red700,
+                            ),
+                          if (est2mm.taxAmount > 0)
+                            _buildSummaryRow('GST (${est2mm.customer.taxRate}%)', 'Rs. ${est2mm.taxAmount.toStringAsFixed(2)}'),
+                          pw.Divider(color: borderColor, thickness: 0.8),
+                          _buildSummaryRow(
+                            'Grand Total',
+                            'Rs. ${est2mm.grandTotal.toStringAsFixed(2)}',
+                            isBold: true,
+                            fontSize: 11,
+                            textColor: primaryColor,
+                          ),
+                          if (est2mm.totalSqFt > 0)
+                            _buildSummaryRow(
+                              'Rate / Sq. Ft',
+                              'Rs. ${est2mm.effectiveRatePerSqFt.toStringAsFixed(2)} / Sq.Ft',
+                              isBold: true,
+                              textColor: secondaryColor,
+                            ),
+                          if (est2mm.advancePaid > 0) ...[
+                            _buildSummaryRow('Advance Paid', 'Rs. ${est2mm.advancePaid.toStringAsFixed(2)}', textColor: PdfColors.green700),
+                            _buildSummaryRow('Balance Due', 'Rs. ${est2mm.balanceDue.toStringAsFixed(2)}', isBold: true, textColor: PdfColors.red800),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
-                  child: pw.Column(
+
+                  // Option 2: 2.5 mm Wire
+                  pw.Expanded(
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.all(10),
+                      margin: const pw.EdgeInsets.only(left: 5),
+                      decoration: pw.BoxDecoration(
+                        color: neutralBg,
+                        border: pw.Border.all(color: primaryColor, width: 1.2),
+                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Container(
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: pw.BoxDecoration(
+                              color: primaryColor,
+                              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                            ),
+                            child: pw.Text(
+                              'OPTION 2: WITH 2.5 MM WIRE (RECOMMENDED)',
+                              style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                            ),
+                          ),
+                          pw.SizedBox(height: 6),
+                          _buildSummaryRow('Material & Work Subtotal', 'Rs. ${est25mm.subtotal.toStringAsFixed(2)}'),
+                          if (est25mm.discountAmount > 0)
+                            _buildSummaryRow(
+                              'Discount',
+                              '- Rs. ${est25mm.discountAmount.toStringAsFixed(2)}',
+                              textColor: PdfColors.red700,
+                            ),
+                          if (est25mm.taxAmount > 0)
+                            _buildSummaryRow('GST (${est25mm.customer.taxRate}%)', 'Rs. ${est25mm.taxAmount.toStringAsFixed(2)}'),
+                          pw.Divider(color: borderColor, thickness: 0.8),
+                          _buildSummaryRow(
+                            'Grand Total',
+                            'Rs. ${est25mm.grandTotal.toStringAsFixed(2)}',
+                            isBold: true,
+                            fontSize: 11,
+                            textColor: primaryColor,
+                          ),
+                          if (est25mm.totalSqFt > 0)
+                            _buildSummaryRow(
+                              'Rate / Sq. Ft',
+                              'Rs. ${est25mm.effectiveRatePerSqFt.toStringAsFixed(2)} / Sq.Ft',
+                              isBold: true,
+                              textColor: primaryColor,
+                            ),
+                          if (est25mm.advancePaid > 0) ...[
+                            _buildSummaryRow('Advance Paid', 'Rs. ${est25mm.advancePaid.toStringAsFixed(2)}', textColor: PdfColors.green700),
+                            _buildSummaryRow('Balance Due', 'Rs. ${est25mm.balanceDue.toStringAsFixed(2)}', isBold: true, textColor: PdfColors.red800),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              // SINGLE WIRE SELECTION
+              (() {
+                final targetEst = wireOption == '2mm' ? est2mm : est25mm;
+                final wireLabel = wireOption == '2mm' ? '2.0 mm High Tensile Wire' : '2.5 mm High Tensile Wire';
+                return pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.end,
+                  children: [
+                    pw.Container(
+                      width: 270,
+                      padding: const pw.EdgeInsets.all(10),
+                      decoration: pw.BoxDecoration(
+                        color: neutralBg,
+                        border: pw.Border.all(color: borderColor),
+                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            'Configuration: $wireLabel',
+                            style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: secondaryColor),
+                          ),
+                          pw.SizedBox(height: 6),
+                          _buildSummaryRow('Subtotal', 'Rs. ${targetEst.subtotal.toStringAsFixed(2)}'),
+                          if (targetEst.discountAmount > 0)
+                            _buildSummaryRow(
+                              'Discount',
+                              '- Rs. ${targetEst.discountAmount.toStringAsFixed(2)}',
+                              textColor: PdfColors.red700,
+                            ),
+                          if (targetEst.taxAmount > 0)
+                            _buildSummaryRow('GST (${targetEst.customer.taxRate}%)', 'Rs. ${targetEst.taxAmount.toStringAsFixed(2)}'),
+                          pw.Divider(color: borderColor, thickness: 1),
+                          _buildSummaryRow(
+                            'Grand Total',
+                            'Rs. ${targetEst.grandTotal.toStringAsFixed(2)}',
+                            isBold: true,
+                            fontSize: 11,
+                            textColor: primaryColor,
+                          ),
+                          if (targetEst.totalSqFt > 0)
+                            _buildSummaryRow(
+                              'Rate / Sq. Ft',
+                              'Rs. ${targetEst.effectiveRatePerSqFt.toStringAsFixed(2)} / Sq.Ft',
+                              isBold: true,
+                              textColor: primaryColor,
+                            ),
+                          if (targetEst.advancePaid > 0) ...[
+                            _buildSummaryRow('Advance Paid', 'Rs. ${targetEst.advancePaid.toStringAsFixed(2)}', textColor: PdfColors.green700),
+                            _buildSummaryRow('Balance Due', 'Rs. ${targetEst.balanceDue.toStringAsFixed(2)}', isBold: true, textColor: PdfColors.red800),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              })(),
+            ],
+            pw.SizedBox(height: 16),
+
+            // Section 3: Technical Specifications & Highlights
+            pw.Container(
+              padding: const pw.EdgeInsets.all(10),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.white,
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                border: pw.Border.all(color: borderColor, width: 0.8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'SPECIFICATIONS & QUALITY ASSURANCE:',
+                    style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: primaryColor),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      _buildSummaryRow('Subtotal', 'Rs. ${estimate.subtotal.toStringAsFixed(2)}'),
-                      if (estimate.discountAmount > 0)
-                        _buildSummaryRow(
-                          'Discount (${estimate.customer.discountType == "percentage" ? "${estimate.customer.discountValue}%" : "Flat"})',
-                          '- Rs. ${estimate.discountAmount.toStringAsFixed(2)}',
-                          textColor: PdfColors.red700,
+                      pw.Expanded(
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text('• Marine Grade AISI 316 Stainless Steel Wire (Rust-Free)', style: const pw.TextStyle(fontSize: 7.5)),
+                            pw.Text('• Heavy Virgin Aluminum Channel with powder coating', style: const pw.TextStyle(fontSize: 7.5)),
+                            pw.Text('• Unobstructed view with maximum balcony & window safety', style: const pw.TextStyle(fontSize: 7.5)),
+                          ],
                         ),
-                      if (estimate.taxAmount > 0)
-                        _buildSummaryRow('GST (${estimate.customer.taxRate}%)', 'Rs. ${estimate.taxAmount.toStringAsFixed(2)}'),
-                      pw.Divider(color: borderColor, thickness: 1),
-                      _buildSummaryRow('Grand Total', 'Rs. ${estimate.grandTotal.toStringAsFixed(2)}', isBold: true, fontSize: 11),
-                      if (estimate.totalSqFt > 0)
-                        _buildSummaryRow(
-                          'Rate / Sq.Ft',
-                          'Rs. ${estimate.effectiveRatePerSqFt.toStringAsFixed(2)} / Sq.Ft',
-                          isBold: true,
-                          textColor: primaryColor,
+                      ),
+                      pw.Expanded(
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text('• High tensile strength (tested up to 400+ kg impact)', style: const pw.TextStyle(fontSize: 7.5)),
+                            pw.Text('• 5 Years Replacement Warranty on SS 316 Wire against rust', style: const pw.TextStyle(fontSize: 7.5)),
+                            pw.Text('• Professional installation by certified technicians', style: const pw.TextStyle(fontSize: 7.5)),
+                          ],
                         ),
-                      if (estimate.advancePaid > 0) ...[
-                        _buildSummaryRow('Advance Paid', 'Rs. ${estimate.advancePaid.toStringAsFixed(2)}', textColor: PdfColors.green700),
-                        _buildSummaryRow('Balance Due', 'Rs. ${estimate.balanceDue.toStringAsFixed(2)}', isBold: true, textColor: PdfColors.red800),
-                      ],
+                      ),
                     ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            pw.SizedBox(height: 24),
+            pw.SizedBox(height: 22),
 
             // Signatures
             pw.Row(
@@ -300,12 +517,34 @@ class PdfInvoiceGenerator {
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
-                    pw.Container(width: 140, height: 1, color: borderColor),
+                    pw.Container(width: 150, height: 1, color: borderColor),
                     pw.SizedBox(height: 4),
-                    pw.Text('For INVISIBLE GRILLS', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                    pw.Text('For ${company.companyName.toUpperCase()}', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
                   ],
                 ),
               ],
+            ),
+            pw.SizedBox(height: 12),
+
+            // Footer Contact Bar
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(vertical: 4),
+              decoration: pw.BoxDecoration(
+                border: pw.Border(top: pw.BorderSide(color: borderColor, width: 0.5)),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    '${company.companyName} | ${company.phone}',
+                    style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey700),
+                  ),
+                  pw.Text(
+                    '${company.instagramId.isNotEmpty ? "IG: ${company.instagramId} | " : ""}${company.facebookId.isNotEmpty ? "FB: ${company.facebookId} | " : ""}${company.email}',
+                    style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey700),
+                  ),
+                ],
+              ),
             ),
           ];
         },
@@ -314,7 +553,7 @@ class PdfInvoiceGenerator {
 
     final outputDir = await getApplicationDocumentsDirectory();
     final sanitizedCustomerName = estimate.customer.name.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
-    final fileName = 'Invisible_Grills_${sanitizedCustomerName}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+    final fileName = '${company.companyName.replaceAll(" ", "_")}_${sanitizedCustomerName}_${DateTime.now().millisecondsSinceEpoch}.pdf';
     final file = File('${outputDir.path}/$fileName');
     await file.writeAsBytes(await pdf.save());
     return file;
@@ -344,11 +583,11 @@ class PdfInvoiceGenerator {
     String label,
     String value, {
     bool isBold = false,
-    double fontSize = 9.0,
+    double fontSize = 8.5,
     PdfColor? textColor,
   }) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 2.5),
+      padding: const pw.EdgeInsets.symmetric(vertical: 2),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [

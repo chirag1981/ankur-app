@@ -10,6 +10,7 @@ class Customer {
   final double discountValue;
   final double advanceAmount;
   final double taxRate; // e.g. 0.0 or 18.0
+  final double profitMarginRate; // Extra ₹ per sq.ft profit margin (e.g. 5.0)
 
   Customer({
     this.id,
@@ -23,6 +24,7 @@ class Customer {
     this.discountValue = 0.0,
     this.advanceAmount = 0.0,
     this.taxRate = 0.0,
+    this.profitMarginRate = 0.0,
   }) : createdAt = createdAt ?? DateTime.now();
 
   Customer copyWith({
@@ -37,6 +39,7 @@ class Customer {
     double? discountValue,
     double? advanceAmount,
     double? taxRate,
+    double? profitMarginRate,
   }) {
     return Customer(
       id: id ?? this.id,
@@ -50,6 +53,7 @@ class Customer {
       discountValue: discountValue ?? this.discountValue,
       advanceAmount: advanceAmount ?? this.advanceAmount,
       taxRate: taxRate ?? this.taxRate,
+      profitMarginRate: profitMarginRate ?? this.profitMarginRate,
     );
   }
 
@@ -66,6 +70,7 @@ class Customer {
       'discount_value': discountValue,
       'advance_amount': advanceAmount,
       'tax_rate': taxRate,
+      'profit_margin_rate': profitMarginRate,
     };
   }
 
@@ -84,6 +89,7 @@ class Customer {
       discountValue: (map['discount_value'] as num?)?.toDouble() ?? 0.0,
       advanceAmount: (map['advance_amount'] as num?)?.toDouble() ?? 0.0,
       taxRate: (map['tax_rate'] as num?)?.toDouble() ?? 0.0,
+      profitMarginRate: (map['profit_margin_rate'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }

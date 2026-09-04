@@ -313,5 +313,54 @@ void main() {
       expect(transport.getEffectiveQuantity(totalSqFt: 100.0, totalWindows: 4), equals(1.0));
       expect(transport.getTotalCost(totalSqFt: 100.0, totalWindows: 4), equals(500.0));
     });
+
+    test('Profit Margin rate per sq ft correctly adds margin to neck-to-neck cost', () {
+      final customer = Customer(
+        name: 'Jane Doe',
+        phone: '9876543210',
+        profitMarginRate: 5.0, // Extra 5 Rs per sq.ft profit margin
+      );
+
+      final rooms = [Room(id: 1, customerId: 1, name: 'Living Room')];
+      final windowsByRoom = {
+        1: [
+          WindowItem(
+            id: 1,
+            roomId: 1,
+            customerId: 1,
+            label: 'Balcony Grill',
+            widthInches: 120.0, // 10 ft
+            heightInches: 120.0, // 10 ft -> 100 sq.ft
+            quantity: 1,
+          ),
+        ],
+      };
+
+      final materials = [
+        MaterialItem(
+          name: 'Labor',
+          category: 'Labor',
+          unit: 'Sq. Ft',
+          unitPrice: 50.0, // Base cost 50 Rs / sq.ft -> 5000 Rs
+          calculationType: 'per_sq_ft',
+        ),
+      ];
+
+      final estimate = CustomerEstimate(
+        customer: customer,
+        rooms: rooms,
+        windowsByRoom: windowsByRoom,
+        materials: materials,
+      );
+
+      expect(estimate.totalSqFt, equals(100.0));
+      expect(estimate.baseCost, equals(5000.0)); // 100 sq.ft * 50 Rs
+      expect(estimate.baseRatePerSqFt, equals(50.0));
+      expect(estimate.profitMarginRate, equals(5.0));
+      expect(estimate.profitMarginAmount, equals(500.0)); // 100 sq.ft * 5 Rs
+      expect(estimate.subtotal, equals(5500.0)); // 5000 base + 500 profit
+      expect(estimate.grandTotal, equals(5500.0));
+      expect(estimate.effectiveRatePerSqFt, equals(55.0)); // 5500 / 100 = 55 Rs/sq.ft
+    });
   });
 }

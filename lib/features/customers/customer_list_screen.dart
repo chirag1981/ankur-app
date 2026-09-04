@@ -8,6 +8,9 @@ import '../providers.dart';
 import '../rooms_and_windows/customer_detail_screen.dart';
 import 'customer_form_dialog.dart';
 
+import '../company/company_profile_dialog.dart';
+import '../../core/database/database_helper.dart';
+
 class CustomerListScreen extends ConsumerStatefulWidget {
   const CustomerListScreen({super.key});
 
@@ -40,6 +43,22 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.business),
+            tooltip: 'Company & Invoice Profile',
+            onPressed: () async {
+              final profile = await DatabaseHelper.instance.getCompanyProfile();
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  builder: (_) => CompanyProfileDialog(
+                    initialProfile: profile,
+                    onSave: (updated) => controller.updateCompanyProfile(updated),
+                  ),
+                );
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.tune),
             tooltip: 'Master Rates & Materials',

@@ -68,10 +68,30 @@ class CustomerEstimate {
     });
   }
 
-  /// Subtotal (materials + any direct window rate if applicable)
+  /// Direct window costs if any
+  double get directWindowCosts => allWindows.fold(0.0, (sum, w) => sum + w.totalCost);
+
+  /// Base Cost (Pure materials + labor + transport cost without profit margin)
+  double get baseCost => materialsCost + directWindowCosts;
+
+  /// Base rate per sq ft before profit margin (Base Cost / Total Sq Ft)
+  double get baseRatePerSqFt {
+    if (totalSqFt <= 0) return 0.0;
+    return baseCost / totalSqFt;
+  }
+
+  /// Extra profit margin rate per sq.ft (e.g. ₹5 / sq.ft)
+  double get profitMarginRate => customer.profitMarginRate;
+
+  /// Total extra profit margin added (Total Sq.Ft × Profit Margin Rate)
+  double get profitMarginAmount {
+    if (totalSqFt <= 0 || profitMarginRate <= 0) return 0.0;
+    return totalSqFt * profitMarginRate;
+  }
+
+  /// Final Selling Subtotal (Base Cost + Profit Margin)
   double get subtotal {
-    final directWindowCosts = allWindows.fold(0.0, (sum, w) => sum + w.totalCost);
-    return materialsCost + directWindowCosts;
+    return baseCost + profitMarginAmount;
   }
 
   /// Computed discount amount
@@ -136,5 +156,66 @@ class CustomerEstimate {
     final ft = getRoomChannelWidthFeet(roomId);
     if (ft <= 0) return 0;
     return (ft / 10.0).ceil();
+  }
+
+  /// Returns a cloned estimate configured specifically for a given wire thickness (e.g. '2mm' or '2.5mm')
+  CustomerEstimate withWireThickness(String wireThickness) {
+    final updatedMaterials = materials.map((item) {
+      final isWire = item.category == 'Wire' ||
+          item.calculationType == 'per_wire_meter' ||
+          item.name.toLowerCase().contains('wire');
+
+      if (!isWire) return item;
+
+      final nameLower = item.name.toLowerCase();
+      bool shouldEnable = false;
+      if (wireThickness == '2mm' &&
+          (nameLower.contains('2mm') ||
+              nameLower.contains('2 mm') ||
+              (!nameLower.contains('2.5') && nameLower.contains('2')))) {
+        shouldEnable = true;
+      } else if (wireThickness == '2.5mm' &&
+          (nameLower.contains('2.5mm') ||
+              nameLower.contains('2.5 mm') ||
+              nameLower.contains('2.5'))) {
+        shouldEnable = true;
+      } else if (wireThickness == '3mm' &&
+          (nameLower.contains('3mm') ||
+              nameLower.contains('3 mm') ||
+              nameLower.contains('3'))) {
+        shouldEnable = true;
+      }
+
+      return item.copyWith(isEnabled: shouldEnable);
+    }).toList();
+
+    // Check if the requested wire exists; if not, add it
+    final hasActiveWire = updatedMaterials.any((m) =>
+        (m.category == 'Wire' || m.calculationType == 'per_wire_meter') && m.isEnabled);
+
+    if (!hasActiveWire) {
+      final wireRate = wireThickness == '2mm' ? 9.0 : (wireThickness == '3mm' ? 16.0 : 13.0);
+      final wireName = wireThickness == '2mm'
+          ? 'Wire (2mm)'
+          : (wireThickness == '3mm' ? 'Wire (3mm)' : 'Wire (2.5mm)');
+      updatedMaterials.add(
+        MaterialItem(
+          customerId: customer.id,
+          name: wireName,
+          category: 'Wire',
+          unit: 'Meter',
+          unitPrice: wireRate,
+          calculationType: 'per_wire_meter',
+          isEnabled: true,
+        ),
+      );
+    }
+
+    return CustomerEstimate(
+      customer: customer,
+      rooms: rooms,
+      windowsByRoom: windowsByRoom,
+      materials: updatedMaterials,
+    );
   }
 }

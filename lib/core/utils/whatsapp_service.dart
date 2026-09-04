@@ -11,12 +11,17 @@ class WhatsAppService {
   static String formatEstimateMessage({
     required CustomerEstimate estimate,
     bool isInvoice = false,
+    String wireOption = 'both',
+    CompanyProfile? companyProfile,
   }) {
+    final company = companyProfile ?? CompanyProfile();
     final title = isInvoice ? 'TAX INVOICE' : 'QUOTATION / ESTIMATE';
     final buffer = StringBuffer();
 
-    buffer.writeln('*INVISIBLE GRILLS*');
-    buffer.writeln('Invisible Grills, Balcony & Safety Solutions');
+    buffer.writeln('*${company.companyName.toUpperCase()}*');
+    if (company.tagline.isNotEmpty) {
+      buffer.writeln(company.tagline);
+    }
     buffer.writeln('--------------------------------');
     buffer.writeln('*$title*');
     buffer.writeln('Ref: IG-${estimate.customer.id.toString().padLeft(4, '0')}');
@@ -28,33 +33,63 @@ class WhatsAppService {
       buffer.writeln('Site: ${estimate.customer.address}');
     }
     buffer.writeln('--------------------------------');
-    buffer.writeln('*MEASUREMENT SUMMARY:*');
+    buffer.writeln('*WINDOWS SCHEDULE:*');
     buffer.writeln('• Total Rooms: ${estimate.totalRoomsCount}');
     buffer.writeln('• Total Windows: ${estimate.totalWindowsCount} Units');
-    buffer.writeln('• Total Area: *${estimate.totalSqFt.toStringAsFixed(2)} Sq. Ft*');
     buffer.writeln('--------------------------------');
     buffer.writeln('*FINANCIAL SUMMARY:*');
-    buffer.writeln('• Subtotal: ${UnitConverter.formatCurrency(estimate.subtotal)}');
-    if (estimate.discountAmount > 0) {
-      final discDesc = estimate.customer.discountType == 'percentage'
-          ? '${estimate.customer.discountValue}%'
-          : 'Flat';
-      buffer.writeln('• Discount ($discDesc): -${UnitConverter.formatCurrency(estimate.discountAmount)}');
+
+    if (wireOption == 'both') {
+      final est2mm = estimate.withWireThickness('2mm');
+      final est25mm = estimate.withWireThickness('2.5mm');
+
+      buffer.writeln('*OPTION 1 (with 2.0 mm SS 316 Wire):*');
+      buffer.writeln('• Subtotal: ${UnitConverter.formatCurrency(est2mm.subtotal)}');
+      if (est2mm.discountAmount > 0) {
+        buffer.writeln('• Discount: -${UnitConverter.formatCurrency(est2mm.discountAmount)}');
+      }
+      buffer.writeln('• *Grand Total: ${UnitConverter.formatCurrency(est2mm.grandTotal)}*');
+      if (est2mm.totalSqFt > 0) {
+        buffer.writeln('• *Rate / Sq.Ft: ${UnitConverter.formatCurrency(est2mm.effectiveRatePerSqFt)} / Sq. Ft*');
+      }
+      buffer.writeln('');
+      buffer.writeln('*OPTION 2 (with 2.5 mm SS 316 Wire - Recommended):*');
+      buffer.writeln('• Subtotal: ${UnitConverter.formatCurrency(est25mm.subtotal)}');
+      if (est25mm.discountAmount > 0) {
+        buffer.writeln('• Discount: -${UnitConverter.formatCurrency(est25mm.discountAmount)}');
+      }
+      buffer.writeln('• *Grand Total: ${UnitConverter.formatCurrency(est25mm.grandTotal)}*');
+      if (est25mm.totalSqFt > 0) {
+        buffer.writeln('• *Rate / Sq.Ft: ${UnitConverter.formatCurrency(est25mm.effectiveRatePerSqFt)} / Sq. Ft*');
+      }
+    } else {
+      final effectiveEst = wireOption == '2mm'
+          ? estimate.withWireThickness('2mm')
+          : (wireOption == '2.5mm' ? estimate.withWireThickness('2.5mm') : estimate);
+
+      buffer.writeln('• Subtotal: ${UnitConverter.formatCurrency(effectiveEst.subtotal)}');
+      if (effectiveEst.discountAmount > 0) {
+        buffer.writeln('• Discount: -${UnitConverter.formatCurrency(effectiveEst.discountAmount)}');
+      }
+      if (effectiveEst.taxAmount > 0) {
+        buffer.writeln('• GST (${effectiveEst.customer.taxRate}%): +${UnitConverter.formatCurrency(effectiveEst.taxAmount)}');
+      }
+      buffer.writeln('• *Grand Total: ${UnitConverter.formatCurrency(effectiveEst.grandTotal)}*');
+      if (effectiveEst.totalSqFt > 0) {
+        buffer.writeln('• *Rate / Sq.Ft: ${UnitConverter.formatCurrency(effectiveEst.effectiveRatePerSqFt)} / Sq. Ft*');
+      }
+      if (effectiveEst.advancePaid > 0) {
+        buffer.writeln('• Advance Paid: ${UnitConverter.formatCurrency(effectiveEst.advancePaid)}');
+        buffer.writeln('• *Balance Due: ${UnitConverter.formatCurrency(effectiveEst.balanceDue)}*');
+      }
     }
-    if (estimate.taxAmount > 0) {
-      buffer.writeln('• GST (${estimate.customer.taxRate}%): +${UnitConverter.formatCurrency(estimate.taxAmount)}');
-    }
-    buffer.writeln('• *Grand Total: ${UnitConverter.formatCurrency(estimate.grandTotal)}*');
-    if (estimate.totalSqFt > 0) {
-      buffer.writeln('• *Rate / Sq.Ft: ${UnitConverter.formatCurrency(estimate.effectiveRatePerSqFt)} / Sq. Ft*');
-    }
-    if (estimate.advancePaid > 0) {
-      buffer.writeln('• Advance Paid: ${UnitConverter.formatCurrency(estimate.advancePaid)}');
-      buffer.writeln('• *Balance Due: ${UnitConverter.formatCurrency(estimate.balanceDue)}*');
-    }
+
     buffer.writeln('--------------------------------');
-    buffer.writeln('Quotation & measurement schedule is attached in the PDF.');
-    buffer.writeln('Thank you for your business!');
+    if (company.phone.isNotEmpty) buffer.writeln('📞 Contact: ${company.phone}');
+    if (company.instagramId.isNotEmpty) buffer.writeln('📸 Instagram: ${company.instagramId}');
+    if (company.facebookId.isNotEmpty) buffer.writeln('🌐 Facebook: ${company.facebookId}');
+    buffer.writeln('Detailed schedule is attached in the PDF.');
+    buffer.writeln('Thank you for choosing *${company.companyName}*!');
 
     return buffer.toString();
   }
@@ -64,14 +99,21 @@ class WhatsAppService {
     required File pdfFile,
     required CustomerEstimate estimate,
     bool isInvoice = false,
+    String wireOption = 'both',
+    CompanyProfile? companyProfile,
   }) async {
-    final text = formatEstimateMessage(estimate: estimate, isInvoice: isInvoice);
+    final text = formatEstimateMessage(
+      estimate: estimate,
+      isInvoice: isInvoice,
+      wireOption: wireOption,
+      companyProfile: companyProfile,
+    );
     final xFile = XFile(pdfFile.path);
 
     await Share.shareXFiles(
       [xFile],
       text: text,
-      subject: '${isInvoice ? "Invoice" : "Quotation"} - ${estimate.customer.name} (Invisible Grills)',
+      subject: '${isInvoice ? "Invoice" : "Quotation"} - ${estimate.customer.name} (${companyProfile?.companyName ?? "Arham Enterprise"})',
     );
   }
 

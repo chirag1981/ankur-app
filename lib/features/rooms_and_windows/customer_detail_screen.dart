@@ -9,6 +9,7 @@ import '../customers/customer_form_dialog.dart';
 import '../materials/material_form_dialog.dart';
 import '../providers.dart';
 import '../quotation_invoice/pdf_preview_screen.dart';
+import '../company/company_profile_dialog.dart';
 import 'room_form_dialog.dart';
 import 'window_form_dialog.dart';
 
@@ -30,15 +31,19 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
 
   // Quotation & Financial State
   String _discountType = 'flat';
+  String _wireOption = 'both'; // 'both', '2.5mm', '2mm'
+  late TextEditingController _profitMarginController;
   late TextEditingController _discountController;
   late TextEditingController _advanceController;
   late TextEditingController _taxController;
+  bool _financialInputsInitialized = false;
   bool _isInvoice = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _profitMarginController = TextEditingController();
     _discountController = TextEditingController();
     _advanceController = TextEditingController();
     _taxController = TextEditingController();
@@ -47,6 +52,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _profitMarginController.dispose();
     _discountController.dispose();
     _advanceController.dispose();
     _taxController.dispose();
@@ -54,8 +60,14 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
   }
 
   void _syncFinancialInputs(Customer customer) {
-    if (_discountController.text.isEmpty) {
+    if (!_financialInputsInitialized) {
+      _financialInputsInitialized = true;
       _discountType = customer.discountType;
+      _profitMarginController.text = customer.profitMarginRate > 0
+          ? (customer.profitMarginRate == customer.profitMarginRate.roundToDouble()
+              ? customer.profitMarginRate.toInt().toString()
+              : customer.profitMarginRate.toString())
+          : '';
       _discountController.text = customer.discountValue > 0
           ? (customer.discountValue == customer.discountValue.roundToDouble()
               ? customer.discountValue.toInt().toString()
@@ -146,7 +158,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
           body: Column(
             children: [
               // Top Quick KPI Summary Banner
-              _buildTopKpiBanner(estimate),
+              _buildTopKpiBanner(_getEffectiveEstimate(estimate)),
 
               // Tab Views
               Expanded(
@@ -759,30 +771,124 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
     );
   }
 
-  // ==========================================
-  // TAB 3: QUOTATION, INVOICE & WHATSAPP
-  // ==========================================
-  Widget _buildQuotationTab(CustomerEstimate estimate, CustomerController controller) {
-    final subtotal = estimate.subtotal;
+  CustomerEstimate _getEffectiveEstimate(CustomerEstimate estimate) {
+    final profitRateVal = double.tryParse(_profitMarginController.text.trim()) ?? 0.0;
     final discountVal = double.tryParse(_discountController.text.trim()) ?? 0.0;
     final advanceVal = double.tryParse(_advanceController.text.trim()) ?? 0.0;
     final taxRateVal = double.tryParse(_taxController.text.trim()) ?? 0.0;
 
-    double calculatedDiscount = 0.0;
-    if (_discountType == 'percentage') {
-      calculatedDiscount = subtotal * (discountVal / 100.0);
-    } else {
-      calculatedDiscount = discountVal;
-    }
+    final updatedCustomer = estimate.customer.copyWith(
+      discountType: _discountType,
+      discountValue: discountVal,
+      advanceAmount: advanceVal,
+      taxRate: taxRateVal,
+      profitMarginRate: profitRateVal,
+      status: _isInvoice ? 'invoiced' : 'quotation',
+    );
 
-    final netAmount = (subtotal - calculatedDiscount) > 0 ? (subtotal - calculatedDiscount) : 0.0;
-    final taxAmount = netAmount * (taxRateVal / 100.0);
-    final grandTotal = netAmount + taxAmount;
-    final balanceDue = (grandTotal - advanceVal) > 0 ? (grandTotal - advanceVal) : 0.0;
+    return CustomerEstimate(
+      customer: updatedCustomer,
+      rooms: estimate.rooms,
+      windowsByRoom: estimate.windowsByRoom,
+      materials: estimate.materials,
+    );
+  }
+
+  // ==========================================
+  // TAB 3: QUOTATION, INVOICE & WHATSAPP
+  // ==========================================
+  Widget _buildQuotationTab(CustomerEstimate estimate, CustomerController controller) {
+    final profitRateVal = double.tryParse(_profitMarginController.text.trim()) ?? 0.0;
+    final discountVal = double.tryParse(_discountController.text.trim()) ?? 0.0;
+    final advanceVal = double.tryParse(_advanceController.text.trim()) ?? 0.0;
+    final taxRateVal = double.tryParse(_taxController.text.trim()) ?? 0.0;
+
+    final baseCost = estimate.baseCost;
+    final profitMarginAmount = estimate.totalSqFt * profitRateVal;
+
+    // Dual wire estimates
+    final est2mm = _getEffectiveEstimate(estimate.withWireThickness('2mm'));
+    final est25mm = _getEffectiveEstimate(estimate.withWireThickness('2.5mm'));
+    final activeEst = _wireOption == '2mm' ? est2mm : (_wireOption == '2.5mm' ? est25mm : _getEffectiveEstimate(estimate));
+
+    final sellingSubtotal = activeEst.subtotal;
+    final calculatedDiscount = activeEst.discountAmount;
+    final taxAmount = activeEst.taxAmount;
+    final grandTotal = activeEst.grandTotal;
+    final balanceDue = activeEst.balanceDue;
+    final sellingRatePerSqFt = activeEst.effectiveRatePerSqFt;
+    final baseRatePerSqFt = estimate.baseRatePerSqFt;
+
+    final companyAsync = ref.watch(companyProfileProvider);
+    final company = companyAsync.value ?? CompanyProfile();
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Company & Invoice Profile Banner
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.business, color: AppColors.primary),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      company.companyName,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: AppColors.primary),
+                    ),
+                    Text(
+                      '${company.phone} ${company.email.isNotEmpty ? "• ${company.email}" : ""}',
+                      style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: const Icon(Icons.edit, size: 14),
+                label: const Text('Edit Details', style: TextStyle(fontSize: 11.5)),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => CompanyProfileDialog(
+                      initialProfile: company,
+                      onSave: (updated) => controller.updateCompanyProfile(updated),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
         // Mode Selector: Quotation vs Tax Invoice
         Container(
           padding: const EdgeInsets.all(12),
@@ -835,7 +941,60 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
+
+        // WIRE THICKNESS QUOTATION OPTION
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.cable, size: 18, color: AppColors.primary),
+                  SizedBox(width: 6),
+                  Text(
+                    'Wire Thickness Option in Quote:',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<String>(
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(
+                    value: 'both',
+                    label: Text('Dual (2mm & 2.5mm)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  ),
+                  ButtonSegment(
+                    value: '2.5mm',
+                    label: Text('2.5mm Only', style: TextStyle(fontSize: 11)),
+                  ),
+                  ButtonSegment(
+                    value: '2mm',
+                    label: Text('2.0mm Only', style: TextStyle(fontSize: 11)),
+                  ),
+                ],
+                selected: {_wireOption},
+                onSelectionChanged: (val) => setState(() => _wireOption = val.first),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _wireOption == 'both'
+                    ? 'Outputs side-by-side comparison for Option 1 (2.0mm) & Option 2 (2.5mm) on official PDF & WhatsApp'
+                    : 'Outputs single quote configured specifically for $_wireOption wire',
+                style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
 
         // Financial Inputs Card
         Card(
@@ -845,19 +1004,150 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  'Pricing, Discounts & Payments',
+                  'Pricing, Profit Margin & Payments',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 14),
 
-                // Subtotal display
+                // Base Cost (Neck-to-Neck) display
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Material & Work Subtotal:', style: TextStyle(fontSize: 14)),
+                    const Text('Base Cost (Neck-to-Neck):', style: TextStyle(fontSize: 13.5, color: AppColors.textMuted)),
                     Text(
-                      UnitConverter.formatCurrency(subtotal),
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      UnitConverter.formatCurrency(baseCost),
+                      style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                if (estimate.totalSqFt > 0) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Base Rate / Sq. Ft:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text(
+                        '${UnitConverter.formatCurrency(baseRatePerSqFt)} / Sq. Ft',
+                        style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 12),
+
+                // PROFIT MARGIN FIELD & SHORTCUTS
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: profitRateVal > 0 ? AppColors.accent.withOpacity(0.06) : Colors.grey.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: profitRateVal > 0 ? AppColors.accent.withOpacity(0.5) : AppColors.borderLight,
+                      width: profitRateVal > 0 ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.trending_up, size: 18, color: AppColors.accent),
+                              SizedBox(width: 6),
+                              Text(
+                                'Profit Margin Rate',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+                              ),
+                            ],
+                          ),
+                          if (profitRateVal > 0 && estimate.totalSqFt > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '+ ${UnitConverter.formatCurrency(profitMarginAmount)}',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _profitMarginController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          labelText: 'Extra Rate (₹ per Sq. Ft)',
+                          hintText: 'e.g. 5 or 10',
+                          prefixText: '₹ ',
+                          suffixText: '/ Sq. Ft',
+                          isDense: true,
+                          helperText: profitRateVal > 0 && estimate.totalSqFt > 0
+                              ? 'Adds ₹$profitRateVal × ${estimate.totalSqFt.toStringAsFixed(1)} sq.ft = +${UnitConverter.formatCurrency(profitMarginAmount)}'
+                              : 'Enter extra ₹ per sq.ft to add to neck-to-neck cost',
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Text('Quick:', style: TextStyle(fontSize: 11.5, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  for (final rate in [5.0, 10.0, 15.0, 20.0, 25.0])
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 6),
+                                      child: ActionChip(
+                                        visualDensity: VisualDensity.compact,
+                                        label: Text('+₹${rate.toInt()}'),
+                                        backgroundColor: profitRateVal == rate ? AppColors.accent.withOpacity(0.25) : Colors.white,
+                                        side: BorderSide(color: profitRateVal == rate ? AppColors.accent : AppColors.borderLight),
+                                        onPressed: () {
+                                          setState(() {
+                                            _profitMarginController.text = rate.toInt().toString();
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  if (profitRateVal > 0)
+                                    ActionChip(
+                                      visualDensity: VisualDensity.compact,
+                                      label: const Text('Clear', style: TextStyle(color: Colors.red, fontSize: 11)),
+                                      backgroundColor: Colors.red.withOpacity(0.08),
+                                      side: const BorderSide(color: Colors.redAccent),
+                                      onPressed: () {
+                                        setState(() {
+                                          _profitMarginController.text = '';
+                                        });
+                                      },
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Selling Subtotal display
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Selling Subtotal (Cost + Margin):', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                    Text(
+                      UnitConverter.formatCurrency(sellingSubtotal),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primary),
                     ),
                   ],
                 ),
@@ -937,10 +1227,12 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                       discountType: _discountType,
                       discountValue: discountVal,
                       advanceAmount: advanceVal,
+                      taxRate: taxRateVal,
+                      profitMarginRate: profitRateVal,
                       status: _isInvoice ? 'invoiced' : 'quotation',
                     );
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Pricing updated successfully!')),
+                      const SnackBar(content: Text('Pricing & Profit Margin updated successfully!')),
                     );
                   },
                 ),
@@ -966,7 +1258,15 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
           ),
           child: Column(
             children: [
-              _buildSummaryLine('Subtotal', UnitConverter.formatCurrency(subtotal), color: Colors.white70),
+              _buildSummaryLine('Base Cost (Neck-to-Neck)', UnitConverter.formatCurrency(baseCost), color: Colors.white70),
+              if (profitRateVal > 0)
+                _buildSummaryLine(
+                  'Profit Margin (+₹${profitRateVal.toStringAsFixed(profitRateVal == profitRateVal.roundToDouble() ? 0 : 2)}/sq.ft)',
+                  '+ ${UnitConverter.formatCurrency(profitMarginAmount)}',
+                  color: Colors.lightGreenAccent,
+                  isBold: true,
+                ),
+              _buildSummaryLine('Selling Subtotal', UnitConverter.formatCurrency(sellingSubtotal), color: Colors.white, isBold: true),
               if (calculatedDiscount > 0)
                 _buildSummaryLine(
                   'Discount Applied',
@@ -980,25 +1280,86 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                   color: Colors.white70,
                 ),
               const Divider(color: Colors.white24, height: 20),
-              _buildSummaryLine(
-                'Grand Total',
-                UnitConverter.formatCurrency(grandTotal),
-                isBold: true,
-                fontSize: 18,
-                color: Colors.white,
-              ),
-              if (estimate.totalSqFt > 0) ...[
-                const SizedBox(height: 4),
-                _buildSummaryLine(
-                  'Rate Per Sq. Ft',
-                  '${UnitConverter.formatCurrency(grandTotal / estimate.totalSqFt)} / Sq. Ft',
-                  isBold: true,
-                  fontSize: 14,
-                  color: Colors.cyanAccent,
+
+              if (_wireOption == 'both') ...[
+                // Dual comparison in summary
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Option 1 (with 2.0 mm Wire):', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                          Text(
+                            UnitConverter.formatCurrency(est2mm.grandTotal),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                        ],
+                      ),
+                      if (estimate.totalSqFt > 0)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Selling Rate / Sq. Ft:', style: TextStyle(color: Colors.cyanAccent, fontSize: 11.5)),
+                            Text(
+                              '${UnitConverter.formatCurrency(est2mm.effectiveRatePerSqFt)} / Sq. Ft',
+                              style: const TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      const Divider(color: Colors.white24, height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Option 2 (with 2.5 mm Wire):', style: TextStyle(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.bold)),
+                          Text(
+                            UnitConverter.formatCurrency(est25mm.grandTotal),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                        ],
+                      ),
+                      if (estimate.totalSqFt > 0)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Selling Rate / Sq. Ft (Recommended):', style: TextStyle(color: Colors.amberAccent, fontSize: 11.5)),
+                            Text(
+                              '${UnitConverter.formatCurrency(est25mm.effectiveRatePerSqFt)} / Sq. Ft',
+                              style: const TextStyle(color: Colors.amberAccent, fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
                 ),
+              ] else ...[
+                _buildSummaryLine(
+                  'Grand Total (${_wireOption == "2mm" ? "2.0mm Wire" : "2.5mm Wire"})',
+                  UnitConverter.formatCurrency(grandTotal),
+                  isBold: true,
+                  fontSize: 18,
+                  color: Colors.white,
+                ),
+                if (estimate.totalSqFt > 0) ...[
+                  const SizedBox(height: 4),
+                  _buildSummaryLine(
+                    'Selling Rate Per Sq. Ft',
+                    '${UnitConverter.formatCurrency(sellingRatePerSqFt)} / Sq. Ft',
+                    isBold: true,
+                    fontSize: 14,
+                    color: Colors.cyanAccent,
+                  ),
+                ],
               ],
+
               if (advanceVal > 0) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 _buildSummaryLine(
                   'Advance Received',
                   UnitConverter.formatCurrency(advanceVal),
@@ -1026,9 +1387,9 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
           icon: const Icon(Icons.share, size: 22),
-          label: const Text(
-            'Share Quotation / Invoice on WhatsApp',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          label: Text(
+            _wireOption == 'both' ? 'Share Dual Quotation on WhatsApp' : 'Share $_wireOption Quotation on WhatsApp',
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           onPressed: () => _handleShareWhatsApp(estimate),
         ),
@@ -1041,16 +1402,27 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
           icon: const Icon(Icons.picture_as_pdf_outlined),
-          label: const Text(
-            'Preview & Print Official PDF',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          label: Text(
+            _wireOption == 'both' ? 'Preview Official PDF (Both 2mm & 2.5mm)' : 'Preview Official PDF ($_wireOption)',
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           onPressed: () {
+            final effectiveEstimate = _getEffectiveEstimate(estimate);
+            controller.updatePricing(
+              customer: estimate.customer,
+              discountType: _discountType,
+              discountValue: discountVal,
+              advanceAmount: advanceVal,
+              taxRate: taxRateVal,
+              profitMarginRate: profitRateVal,
+              status: _isInvoice ? 'invoiced' : 'quotation',
+            );
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => PdfPreviewScreen(
-                  estimate: estimate,
+                  estimate: effectiveEstimate,
                   isInvoice: _isInvoice,
+                  wireOption: _wireOption,
                 ),
               ),
             );
@@ -1147,19 +1519,33 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
 
   Future<void> _handleShareWhatsApp(CustomerEstimate estimate) async {
     try {
+      final effectiveEstimate = _getEffectiveEstimate(estimate);
+      // Auto-save pricing
+      ref.read(customerControllerProvider).updatePricing(
+        customer: estimate.customer,
+        discountType: _discountType,
+        discountValue: double.tryParse(_discountController.text.trim()) ?? 0.0,
+        advanceAmount: double.tryParse(_advanceController.text.trim()) ?? 0.0,
+        taxRate: double.tryParse(_taxController.text.trim()) ?? 0.0,
+        profitMarginRate: double.tryParse(_profitMarginController.text.trim()) ?? 0.0,
+        status: _isInvoice ? 'invoiced' : 'quotation',
+      );
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Generating PDF and opening WhatsApp...'), duration: Duration(seconds: 2)),
       );
 
       final pdfFile = await PdfInvoiceGenerator.generateEstimatePdf(
-        estimate: estimate,
+        estimate: effectiveEstimate,
         isInvoice: _isInvoice,
+        wireOption: _wireOption,
       );
 
       await WhatsAppService.sharePdf(
         pdfFile: pdfFile,
-        estimate: estimate,
+        estimate: effectiveEstimate,
         isInvoice: _isInvoice,
+        wireOption: _wireOption,
       );
     } catch (e) {
       if (mounted) {

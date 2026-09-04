@@ -29,6 +29,12 @@ final masterMaterialsProvider = FutureProvider<List<MaterialItem>>((ref) async {
   return await db.getMasterMaterials();
 });
 
+// Company Profile Provider
+final companyProfileProvider = FutureProvider<CompanyProfile>((ref) async {
+  final db = DatabaseHelper.instance;
+  return await db.getCompanyProfile();
+});
+
 // Customer Controller for Actions
 final customerControllerProvider = Provider((ref) => CustomerController(ref));
 
@@ -37,6 +43,11 @@ class CustomerController {
   final DatabaseHelper _db = DatabaseHelper.instance;
 
   CustomerController(this.ref);
+
+  Future<void> updateCompanyProfile(CompanyProfile profile) async {
+    await _db.updateCompanyProfile(profile);
+    ref.invalidate(companyProfileProvider);
+  }
 
   Future<int> createCustomer(Customer customer) async {
     final id = await _db.insertCustomer(customer);
@@ -125,18 +136,22 @@ class CustomerController {
     }
   }
 
-  // Quick helper to update discount or advance
+  // Quick helper to update discount, advance, profit margin, or tax
   Future<void> updatePricing({
     required Customer customer,
     required String discountType,
     required double discountValue,
     required double advanceAmount,
+    double? taxRate,
+    double? profitMarginRate,
     required String status,
   }) async {
     final updated = customer.copyWith(
       discountType: discountType,
       discountValue: discountValue,
       advanceAmount: advanceAmount,
+      taxRate: taxRate ?? customer.taxRate,
+      profitMarginRate: profitMarginRate ?? customer.profitMarginRate,
       status: status,
     );
     await updateCustomer(updated);

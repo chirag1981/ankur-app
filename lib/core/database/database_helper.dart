@@ -20,10 +20,48 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 7,
+      version: 9,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
       onOpen: (db) async {
+        // Ensure profit_margin_rate column exists in customers table
+        final customerCols = await db.rawQuery('PRAGMA table_info(customers)');
+        final hasProfitMargin = customerCols.any((c) => c['name'] == 'profit_margin_rate');
+        if (!hasProfitMargin) {
+          await db.execute('ALTER TABLE customers ADD COLUMN profit_margin_rate REAL NOT NULL DEFAULT 0.0');
+        }
+
+        // Ensure company_profile table exists
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS company_profile (
+            id INTEGER PRIMARY KEY,
+            company_name TEXT NOT NULL,
+            tagline TEXT,
+            phone TEXT,
+            email TEXT,
+            facebook_id TEXT,
+            instagram_id TEXT,
+            address TEXT,
+            logo_path TEXT
+          )
+        ''');
+
+        // Seed default company profile if empty
+        final profileRows = await db.query('company_profile');
+        if (profileRows.isEmpty) {
+          await db.insert('company_profile', {
+            'id': 1,
+            'company_name': 'ARHAM ENTERPRISE',
+            'tagline': 'INVISIBLE GRILL - Secure, Stylish & Invisible',
+            'phone': '+91 98765 43210',
+            'email': 'contact@arhamenterprise.com',
+            'facebook_id': 'Arham Invisible Grill',
+            'instagram_id': '@arham_enterprise',
+            'address': '',
+            'logo_path': 'assets/images/logo.png',
+          });
+        }
+
         // Automatically ensure master and default Labor materials are updated to 20.0/sq.ft
         await db.execute('''
           UPDATE materials 
@@ -122,7 +160,8 @@ class DatabaseHelper {
         discount_type TEXT NOT NULL DEFAULT 'flat',
         discount_value REAL NOT NULL DEFAULT 0.0,
         advance_amount REAL NOT NULL DEFAULT 0.0,
-        tax_rate REAL NOT NULL DEFAULT 0.0
+        tax_rate REAL NOT NULL DEFAULT 0.0,
+        profit_margin_rate REAL NOT NULL DEFAULT 0.0
       )
     ''');
 
@@ -170,6 +209,32 @@ class DatabaseHelper {
         FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
       )
     ''');
+
+    // Company Profile Table
+    await db.execute('''
+      CREATE TABLE company_profile (
+        id INTEGER PRIMARY KEY,
+        company_name TEXT NOT NULL,
+        tagline TEXT,
+        phone TEXT,
+        email TEXT,
+        facebook_id TEXT,
+        instagram_id TEXT,
+        address TEXT,
+        logo_path TEXT
+      )
+    ''');
+    await db.insert('company_profile', {
+      'id': 1,
+      'company_name': 'ARHAM ENTERPRISE',
+      'tagline': 'INVISIBLE GRILL - Secure, Stylish & Invisible',
+      'phone': '+91 98765 43210',
+      'email': 'contact@arhamenterprise.com',
+      'facebook_id': 'Arham Invisible Grill',
+      'instagram_id': '@arham_enterprise',
+      'address': '',
+      'logo_path': 'assets/images/logo.png',
+    });
 
     // Seed master default material items (where customer_id IS NULL)
     await _seedDefaultMasterMaterials(db);
@@ -228,6 +293,42 @@ class DatabaseHelper {
           'multiplier': 1.0,
           'manual_quantity': 1.0,
           'is_enabled': 1,
+        });
+      }
+    }
+    if (oldVersion < 8) {
+      final customerCols = await db.rawQuery('PRAGMA table_info(customers)');
+      final hasProfitMargin = customerCols.any((c) => c['name'] == 'profit_margin_rate');
+      if (!hasProfitMargin) {
+        await db.execute('ALTER TABLE customers ADD COLUMN profit_margin_rate REAL NOT NULL DEFAULT 0.0');
+      }
+    }
+    if (oldVersion < 9) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS company_profile (
+          id INTEGER PRIMARY KEY,
+          company_name TEXT NOT NULL,
+          tagline TEXT,
+          phone TEXT,
+          email TEXT,
+          facebook_id TEXT,
+          instagram_id TEXT,
+          address TEXT,
+          logo_path TEXT
+        )
+      ''');
+      final profileRows = await db.query('company_profile');
+      if (profileRows.isEmpty) {
+        await db.insert('company_profile', {
+          'id': 1,
+          'company_name': 'ARHAM ENTERPRISE',
+          'tagline': 'INVISIBLE GRILL - Secure, Stylish & Invisible',
+          'phone': '+91 98765 43210',
+          'email': 'contact@arhamenterprise.com',
+          'facebook_id': 'Arham Invisible Grill',
+          'instagram_id': '@arham_enterprise',
+          'address': '',
+          'logo_path': 'assets/images/logo.png',
         });
       }
     }
@@ -575,6 +676,30 @@ class DatabaseHelper {
       rooms: rooms,
       windowsByRoom: windowsByRoom,
       materials: materials,
+    );
+  }
+
+  // ==========================================
+  // COMPANY PROFILE
+  // ==========================================
+
+  Future<CompanyProfile> getCompanyProfile() async {
+    final db = await database;
+    final maps = await db.query('company_profile', where: 'id = 1');
+    if (maps.isNotEmpty) {
+      return CompanyProfile.fromMap(maps.first);
+    }
+    final defaultProfile = CompanyProfile();
+    await db.insert('company_profile', defaultProfile.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    return defaultProfile;
+  }
+
+  Future<void> updateCompanyProfile(CompanyProfile profile) async {
+    final db = await database;
+    await db.insert(
+      'company_profile',
+      profile.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 }

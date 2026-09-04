@@ -6,11 +6,13 @@ import '../../models/models.dart';
 class PdfPreviewScreen extends StatelessWidget {
   final CustomerEstimate estimate;
   final bool isInvoice;
+  final String wireOption; // '2mm', '2.5mm', or 'both'
 
   const PdfPreviewScreen({
     super.key,
     required this.estimate,
     this.isInvoice = false,
+    this.wireOption = 'both',
   });
 
   @override
@@ -26,6 +28,7 @@ class PdfPreviewScreen extends StatelessWidget {
           final file = await PdfInvoiceGenerator.generateEstimatePdf(
             estimate: estimate,
             isInvoice: isInvoice,
+            wireOption: wireOption,
           );
           return await file.readAsBytes();
         },
