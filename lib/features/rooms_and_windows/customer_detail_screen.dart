@@ -31,7 +31,8 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
 
   // Quotation & Financial State
   String _discountType = 'flat';
-  String _wireOption = 'both'; // 'both', '2.5mm', '2mm'
+  Set<String> _selectedWireOptions = {'2mm', '2.5mm'};
+  String get _wireOptionString => _selectedWireOptions.isEmpty ? '2.5mm' : _selectedWireOptions.join(',');
   late TextEditingController _profitMarginController;
   late TextEditingController _discountController;
   late TextEditingController _advanceController;
@@ -80,6 +81,9 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
           : '';
       _taxController.text = customer.taxRate > 0 ? customer.taxRate.toString() : '';
       _isInvoice = customer.status == 'invoiced';
+      if (_isInvoice) {
+        _selectedWireOptions = {'2.5mm'};
+      }
     }
   }
 
@@ -821,10 +825,17 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
     final baseCost = estimate.baseCost;
     final profitMarginAmount = estimate.totalSqFt * profitRateVal;
 
-    // Dual wire estimates
-    final est2mm = _getEffectiveEstimate(estimate.withWireThickness('2mm'));
-    final est25mm = _getEffectiveEstimate(estimate.withWireThickness('2.5mm'));
-    final activeEst = _wireOption == '2mm' ? est2mm : (_wireOption == '2.5mm' ? est25mm : _getEffectiveEstimate(estimate));
+    // Wire options & calculations
+    final selectedList = _selectedWireOptions.isEmpty ? ['2.5mm'] : _selectedWireOptions.toList();
+    const wireOrder = ['2mm', '2.5mm', '3mm'];
+    selectedList.sort((a, b) => wireOrder.indexOf(a).compareTo(wireOrder.indexOf(b)));
+
+    final estMap = <String, CustomerEstimate>{
+      '2mm': _getEffectiveEstimate(estimate.withWireThickness('2mm')),
+      '2.5mm': _getEffectiveEstimate(estimate.withWireThickness('2.5mm')),
+      '3mm': _getEffectiveEstimate(estimate.withWireThickness('3mm')),
+    };
+    final activeEst = estMap[selectedList.first]!;
 
     final sellingSubtotal = activeEst.subtotal;
     final calculatedDiscount = activeEst.discountAmount;
@@ -947,7 +958,15 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                         fontWeight: _isInvoice ? FontWeight.bold : FontWeight.normal,
                       ),
                       onSelected: (val) {
-                        if (val) setState(() => _isInvoice = true);
+                        if (val) {
+                          setState(() {
+                            _isInvoice = true;
+                            // Default to 2.5mm single option for invoice if multi selected
+                            if (_selectedWireOptions.length > 1) {
+                              _selectedWireOptions = {'2.5mm'};
+                            }
+                          });
+                        }
                       },
                     ),
                   ),
@@ -958,7 +977,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
         ),
         const SizedBox(height: 12),
 
-        // WIRE THICKNESS QUOTATION OPTION
+        // WIRE THICKNESS QUOTATION & INVOICE OPTION
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -969,41 +988,131 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(Icons.cable, size: 18, color: AppColors.primary),
-                  SizedBox(width: 6),
-                  Text(
-                    'Wire Thickness Option in Quote:',
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  const Row(
+                    children: [
+                      Icon(Icons.cable, size: 18, color: AppColors.primary),
+                      SizedBox(width: 6),
+                      Text(
+                        'Wire Thickness Options:',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      ),
+                    ],
                   ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: selectedList.length == 1 ? Colors.green.withOpacity(0.12) : AppColors.accent.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      selectedList.length == 1 ? 'Single Calculation' : '${selectedList.length} Options (Comparison)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: selectedList.length == 1 ? Colors.green[800] : AppColors.accent,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              // 3 Wire Selection FilterChips
+              Row(
+                children: [
+                  for (final wire in ['2mm', '2.5mm', '3mm']) ...[
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        child: FilterChip(
+                          showCheckmark: true,
+                          checkmarkColor: _selectedWireOptions.contains(wire) ? Colors.white : AppColors.primary,
+                          selected: _selectedWireOptions.contains(wire),
+                          selectedColor: AppColors.primary,
+                          backgroundColor: Colors.grey.withOpacity(0.08),
+                          labelStyle: TextStyle(
+                            color: _selectedWireOptions.contains(wire) ? Colors.white : AppColors.textDark,
+                            fontWeight: _selectedWireOptions.contains(wire) ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 12.5,
+                          ),
+                          label: Center(
+                            child: Text(
+                              wire == '2mm' ? '2.0 mm' : (wire == '2.5mm' ? '2.5 mm' : '3.0 mm'),
+                            ),
+                          ),
+                          onSelected: (selected) {
+                            setState(() {
+                              if (selected) {
+                                _selectedWireOptions.add(wire);
+                              } else {
+                                if (_selectedWireOptions.length > 1) {
+                                  _selectedWireOptions.remove(wire);
+                                }
+                              }
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 8),
-              SegmentedButton<String>(
-                showSelectedIcon: false,
-                segments: const [
-                  ButtonSegment(
-                    value: 'both',
-                    label: Text('Dual (2mm & 2.5mm)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  ),
-                  ButtonSegment(
-                    value: '2.5mm',
-                    label: Text('2.5mm Only', style: TextStyle(fontSize: 11)),
-                  ),
-                  ButtonSegment(
-                    value: '2mm',
-                    label: Text('2.0mm Only', style: TextStyle(fontSize: 11)),
-                  ),
-                ],
-                selected: {_wireOption},
-                onSelectionChanged: (val) => setState(() => _wireOption = val.first),
+              // Quick preset shortcuts
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    const Text('Quick: ', style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+                    ActionChip(
+                      visualDensity: VisualDensity.compact,
+                      label: const Text('2.0mm Only', style: TextStyle(fontSize: 11)),
+                      backgroundColor: _selectedWireOptions.length == 1 && _selectedWireOptions.contains('2mm') ? AppColors.accent.withOpacity(0.2) : Colors.white,
+                      side: BorderSide(color: _selectedWireOptions.length == 1 && _selectedWireOptions.contains('2mm') ? AppColors.accent : AppColors.borderLight),
+                      onPressed: () => setState(() => _selectedWireOptions = {'2mm'}),
+                    ),
+                    const SizedBox(width: 5),
+                    ActionChip(
+                      visualDensity: VisualDensity.compact,
+                      label: const Text('2.5mm Only', style: TextStyle(fontSize: 11)),
+                      backgroundColor: _selectedWireOptions.length == 1 && _selectedWireOptions.contains('2.5mm') ? AppColors.accent.withOpacity(0.2) : Colors.white,
+                      side: BorderSide(color: _selectedWireOptions.length == 1 && _selectedWireOptions.contains('2.5mm') ? AppColors.accent : AppColors.borderLight),
+                      onPressed: () => setState(() => _selectedWireOptions = {'2.5mm'}),
+                    ),
+                    const SizedBox(width: 5),
+                    ActionChip(
+                      visualDensity: VisualDensity.compact,
+                      label: const Text('3.0mm Only', style: TextStyle(fontSize: 11)),
+                      backgroundColor: _selectedWireOptions.length == 1 && _selectedWireOptions.contains('3mm') ? AppColors.accent.withOpacity(0.2) : Colors.white,
+                      side: BorderSide(color: _selectedWireOptions.length == 1 && _selectedWireOptions.contains('3mm') ? AppColors.accent : AppColors.borderLight),
+                      onPressed: () => setState(() => _selectedWireOptions = {'3mm'}),
+                    ),
+                    const SizedBox(width: 5),
+                    ActionChip(
+                      visualDensity: VisualDensity.compact,
+                      label: const Text('Dual (2 & 2.5mm)', style: TextStyle(fontSize: 11)),
+                      backgroundColor: _selectedWireOptions.length == 2 && _selectedWireOptions.contains('2mm') && _selectedWireOptions.contains('2.5mm') ? AppColors.accent.withOpacity(0.2) : Colors.white,
+                      side: BorderSide(color: _selectedWireOptions.length == 2 && _selectedWireOptions.contains('2mm') && _selectedWireOptions.contains('2.5mm') ? AppColors.accent : AppColors.borderLight),
+                      onPressed: () => setState(() => _selectedWireOptions = {'2mm', '2.5mm'}),
+                    ),
+                    const SizedBox(width: 5),
+                    ActionChip(
+                      visualDensity: VisualDensity.compact,
+                      label: const Text('All 3 Wires', style: TextStyle(fontSize: 11)),
+                      backgroundColor: _selectedWireOptions.length == 3 ? AppColors.accent.withOpacity(0.2) : Colors.white,
+                      side: BorderSide(color: _selectedWireOptions.length == 3 ? AppColors.accent : AppColors.borderLight),
+                      onPressed: () => setState(() => _selectedWireOptions = {'2mm', '2.5mm', '3mm'}),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 6),
               Text(
-                _wireOption == 'both'
-                    ? 'Outputs side-by-side comparison for Option 1 (2.0mm) & Option 2 (2.5mm) on official PDF & WhatsApp'
-                    : 'Outputs single quote configured specifically for $_wireOption wire',
+                selectedList.length == 1
+                    ? 'Outputs single calculation configured specifically for ${selectedList.first == "2mm" ? "2.0mm" : (selectedList.first == "3mm" ? "3.0mm" : "2.5mm")} wire'
+                    : 'Outputs side-by-side comparison for ${selectedList.map((w) => w == "2mm" ? "2.0mm" : (w == "3mm" ? "3.0mm" : "2.5mm")).join(" & ")} on official PDF & WhatsApp',
                 style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
               ),
             ],
@@ -1296,8 +1405,8 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                 ),
               const Divider(color: Colors.white24, height: 20),
 
-              if (_wireOption == 'both') ...[
-                // Dual comparison in summary
+              if (selectedList.length > 1) ...[
+                // Multi-option comparison in summary
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -1307,55 +1416,53 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                   ),
                   child: Column(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Option 1 (with 2.0 mm Wire):', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                          Text(
-                            UnitConverter.formatCurrency(est2mm.grandTotal),
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-                          ),
-                        ],
-                      ),
-                      if (estimate.totalSqFt > 0)
+                      for (int i = 0; i < selectedList.length; i++) ...[
+                        if (i > 0) const Divider(color: Colors.white24, height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Selling Rate / Sq. Ft:', style: TextStyle(color: Colors.cyanAccent, fontSize: 11.5)),
                             Text(
-                              '${UnitConverter.formatCurrency(est2mm.effectiveRatePerSqFt)} / Sq. Ft',
-                              style: const TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.w600),
+                              'Option ${i + 1} (${selectedList[i] == "2mm" ? "2.0 mm Wire" : (selectedList[i] == "3mm" ? "3.0 mm Wire" : "2.5 mm Wire")}):',
+                              style: TextStyle(
+                                color: selectedList[i] == "2.5mm" ? Colors.amberAccent : Colors.white70,
+                                fontSize: 13,
+                                fontWeight: selectedList[i] == "2.5mm" ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                            Text(
+                              UnitConverter.formatCurrency(estMap[selectedList[i]]!.grandTotal),
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
                             ),
                           ],
                         ),
-                      const Divider(color: Colors.white24, height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Option 2 (with 2.5 mm Wire):', style: TextStyle(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.bold)),
-                          Text(
-                            UnitConverter.formatCurrency(est25mm.grandTotal),
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                        if (estimate.totalSqFt > 0)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                selectedList[i] == "2.5mm" ? 'Selling Rate / Sq. Ft (Recommended):' : 'Selling Rate / Sq. Ft:',
+                                style: TextStyle(
+                                  color: selectedList[i] == "2.5mm" ? Colors.amberAccent : Colors.cyanAccent,
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                              Text(
+                                '${UnitConverter.formatCurrency(estMap[selectedList[i]]!.effectiveRatePerSqFt)} / Sq. Ft',
+                                style: TextStyle(
+                                  color: selectedList[i] == "2.5mm" ? Colors.amberAccent : Colors.cyanAccent,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      if (estimate.totalSqFt > 0)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Selling Rate / Sq. Ft (Recommended):', style: TextStyle(color: Colors.amberAccent, fontSize: 11.5)),
-                            Text(
-                              '${UnitConverter.formatCurrency(est25mm.effectiveRatePerSqFt)} / Sq. Ft',
-                              style: const TextStyle(color: Colors.amberAccent, fontSize: 12, fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
+                      ],
                     ],
                   ),
                 ),
               ] else ...[
                 _buildSummaryLine(
-                  'Grand Total (${_wireOption == "2mm" ? "2.0mm Wire" : "2.5mm Wire"})',
+                  'Grand Total (${selectedList.first == "2mm" ? "2.0mm Wire" : (selectedList.first == "3mm" ? "3.0mm Wire" : "2.5mm Wire")})',
                   UnitConverter.formatCurrency(grandTotal),
                   isBold: true,
                   fontSize: 18,
@@ -1403,7 +1510,9 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
           ),
           icon: const Icon(Icons.share, size: 22),
           label: Text(
-            _wireOption == 'both' ? 'Share Dual Quotation on WhatsApp' : 'Share $_wireOption Quotation on WhatsApp',
+            selectedList.length == 1
+                ? 'Share ${selectedList.first} ${_isInvoice ? "Invoice" : "Quotation"} on WhatsApp'
+                : 'Share Multi-Wire Quote (${selectedList.join(" & ")}) on WhatsApp',
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           onPressed: () => _handleShareWhatsApp(estimate),
@@ -1418,7 +1527,9 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
           ),
           icon: const Icon(Icons.picture_as_pdf_outlined),
           label: Text(
-            _wireOption == 'both' ? 'Preview Official PDF (Both 2mm & 2.5mm)' : 'Preview Official PDF ($_wireOption)',
+            selectedList.length == 1
+                ? 'Preview Official ${_isInvoice ? "Invoice" : "PDF"} (${selectedList.first})'
+                : 'Preview Official PDF (${selectedList.join(" & ")})',
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           onPressed: () {
@@ -1437,7 +1548,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                 builder: (_) => PdfPreviewScreen(
                   estimate: effectiveEstimate,
                   isInvoice: _isInvoice,
-                  wireOption: _wireOption,
+                  wireOption: _wireOptionString,
                 ),
               ),
             );
@@ -1553,14 +1664,14 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
       final pdfFile = await PdfInvoiceGenerator.generateEstimatePdf(
         estimate: effectiveEstimate,
         isInvoice: _isInvoice,
-        wireOption: _wireOption,
+        wireOption: _wireOptionString,
       );
 
       await WhatsAppService.sharePdf(
         pdfFile: pdfFile,
         estimate: effectiveEstimate,
         isInvoice: _isInvoice,
-        wireOption: _wireOption,
+        wireOption: _wireOptionString,
       );
     } catch (e) {
       if (mounted) {

@@ -130,8 +130,7 @@ class PdfInvoiceGenerator {
           );
         },
         build: (pw.Context context) {
-          final est2mm = estimate.withWireThickness('2mm');
-          final est25mm = estimate.withWireThickness('2.5mm');
+          final selectedWires = parseWireOptions(wireOption);
 
           return [
             // Customer Details Section
@@ -186,7 +185,7 @@ class PdfInvoiceGenerator {
             pw.SizedBox(height: 6),
 
             (() {
-              final targetEst = wireOption == '2mm' ? est2mm : est25mm;
+              final targetEst = estimate.withWireThickness(selectedWires.first);
               final defaultRate = targetEst.totalSqFt > 0 ? (targetEst.subtotal / targetEst.totalSqFt) : 0.0;
 
               return pw.Table(
@@ -247,143 +246,46 @@ class PdfInvoiceGenerator {
 
             // Section 2: Financial Summary & Quotation Options
             pw.Text(
-              '2. FINANCIAL SUMMARY & QUOTATION OPTIONS',
+              isInvoice || selectedWires.length == 1
+                  ? '2. FINANCIAL SUMMARY'
+                  : '2. FINANCIAL SUMMARY & QUOTATION OPTIONS',
               style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: primaryColor),
             ),
             pw.SizedBox(height: 8),
 
-            if (wireOption == 'both') ...[
-              // DUAL QUOTE OPTIONS COMPARISON (2.0mm vs 2.5mm)
+            if (selectedWires.length > 1) ...[
+              // MULTI-OPTION COMPARISON (2 or 3 columns based on selection)
               pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  // Option 1: 2.0 mm Wire
-                  pw.Expanded(
-                    child: pw.Container(
-                      padding: const pw.EdgeInsets.all(10),
-                      margin: const pw.EdgeInsets.only(right: 5),
-                      decoration: pw.BoxDecoration(
-                        color: neutralBg,
-                        border: pw.Border.all(color: borderColor),
-                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                      ),
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Container(
-                            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                            decoration: pw.BoxDecoration(
-                              color: secondaryColor,
-                              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-                            ),
-                            child: pw.Text(
-                              'OPTION 1: WITH 2.0 MM WIRE',
-                              style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-                            ),
-                          ),
-                          pw.SizedBox(height: 6),
-                          _buildSummaryRow('Material & Work Subtotal', 'Rs. ${est2mm.subtotal.toStringAsFixed(2)}'),
-                          if (est2mm.discountAmount > 0)
-                            _buildSummaryRow(
-                              'Discount',
-                              '- Rs. ${est2mm.discountAmount.toStringAsFixed(2)}',
-                              textColor: PdfColors.red700,
-                            ),
-                          if (est2mm.taxAmount > 0)
-                            _buildSummaryRow('GST (${est2mm.customer.taxRate}%)', 'Rs. ${est2mm.taxAmount.toStringAsFixed(2)}'),
-                          pw.Divider(color: borderColor, thickness: 0.8),
-                          _buildSummaryRow(
-                            'Grand Total',
-                            'Rs. ${est2mm.grandTotal.toStringAsFixed(2)}',
-                            isBold: true,
-                            fontSize: 11,
-                            textColor: primaryColor,
-                          ),
-                          if (est2mm.totalSqFt > 0)
-                            _buildSummaryRow(
-                              'Rate / Sq. Ft',
-                              'Rs. ${est2mm.effectiveRatePerSqFt.toStringAsFixed(2)} / Sq.Ft',
-                              isBold: true,
-                              textColor: secondaryColor,
-                            ),
-                          if (est2mm.advancePaid > 0) ...[
-                            _buildSummaryRow('Advance Paid', 'Rs. ${est2mm.advancePaid.toStringAsFixed(2)}', textColor: PdfColors.green700),
-                            _buildSummaryRow('Balance Due', 'Rs. ${est2mm.balanceDue.toStringAsFixed(2)}', isBold: true, textColor: PdfColors.red800),
-                          ],
-                        ],
+                  for (int i = 0; i < selectedWires.length; i++) ...[
+                    if (i > 0) pw.SizedBox(width: 8),
+                    pw.Expanded(
+                      child: _buildWireOptionCard(
+                        estimate: estimate.withWireThickness(selectedWires[i]),
+                        wireThickness: selectedWires[i],
+                        optionNumber: i + 1,
+                        isRecommended: selectedWires[i] == '2.5mm',
+                        primaryColor: primaryColor,
+                        secondaryColor: secondaryColor,
+                        borderColor: borderColor,
+                        neutralBg: neutralBg,
                       ),
                     ),
-                  ),
-
-                  // Option 2: 2.5 mm Wire
-                  pw.Expanded(
-                    child: pw.Container(
-                      padding: const pw.EdgeInsets.all(10),
-                      margin: const pw.EdgeInsets.only(left: 5),
-                      decoration: pw.BoxDecoration(
-                        color: neutralBg,
-                        border: pw.Border.all(color: primaryColor, width: 1.2),
-                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                      ),
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Container(
-                            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                            decoration: pw.BoxDecoration(
-                              color: primaryColor,
-                              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-                            ),
-                            child: pw.Text(
-                              'OPTION 2: WITH 2.5 MM WIRE (RECOMMENDED)',
-                              style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-                            ),
-                          ),
-                          pw.SizedBox(height: 6),
-                          _buildSummaryRow('Material & Work Subtotal', 'Rs. ${est25mm.subtotal.toStringAsFixed(2)}'),
-                          if (est25mm.discountAmount > 0)
-                            _buildSummaryRow(
-                              'Discount',
-                              '- Rs. ${est25mm.discountAmount.toStringAsFixed(2)}',
-                              textColor: PdfColors.red700,
-                            ),
-                          if (est25mm.taxAmount > 0)
-                            _buildSummaryRow('GST (${est25mm.customer.taxRate}%)', 'Rs. ${est25mm.taxAmount.toStringAsFixed(2)}'),
-                          pw.Divider(color: borderColor, thickness: 0.8),
-                          _buildSummaryRow(
-                            'Grand Total',
-                            'Rs. ${est25mm.grandTotal.toStringAsFixed(2)}',
-                            isBold: true,
-                            fontSize: 11,
-                            textColor: primaryColor,
-                          ),
-                          if (est25mm.totalSqFt > 0)
-                            _buildSummaryRow(
-                              'Rate / Sq. Ft',
-                              'Rs. ${est25mm.effectiveRatePerSqFt.toStringAsFixed(2)} / Sq.Ft',
-                              isBold: true,
-                              textColor: primaryColor,
-                            ),
-                          if (est25mm.advancePaid > 0) ...[
-                            _buildSummaryRow('Advance Paid', 'Rs. ${est25mm.advancePaid.toStringAsFixed(2)}', textColor: PdfColors.green700),
-                            _buildSummaryRow('Balance Due', 'Rs. ${est25mm.balanceDue.toStringAsFixed(2)}', isBold: true, textColor: PdfColors.red800),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
+                  ],
                 ],
               ),
             ] else ...[
               // SINGLE WIRE SELECTION
               (() {
-                final targetEst = wireOption == '2mm' ? est2mm : est25mm;
-                final wireLabel = wireOption == '2mm' ? '2.0 mm High Tensile Wire' : '2.5 mm High Tensile Wire';
+                final wire = selectedWires.first;
+                final targetEst = estimate.withWireThickness(wire);
+                final wireLabel = _getWireDisplayLabel(wire);
                 return pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.end,
                   children: [
                     pw.Container(
-                      width: 270,
+                      width: 280,
                       padding: const pw.EdgeInsets.all(10),
                       decoration: pw.BoxDecoration(
                         color: neutralBg,
@@ -637,6 +539,119 @@ class PdfInvoiceGenerator {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  static List<String> parseWireOptions(String wireOption) {
+    if (wireOption == 'both') return ['2mm', '2.5mm'];
+    final parts = wireOption.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+    if (parts.isEmpty) return ['2.5mm'];
+    const order = ['2mm', '2.5mm', '3mm'];
+    parts.sort((a, b) {
+      final ia = order.indexOf(a);
+      final ib = order.indexOf(b);
+      return (ia == -1 ? 99 : ia).compareTo(ib == -1 ? 99 : ib);
+    });
+    return parts;
+  }
+
+  static String _getWireDisplayLabel(String wire) {
+    switch (wire) {
+      case '2mm':
+        return '2.0 mm High Tensile Wire';
+      case '2.5mm':
+        return '2.5 mm High Tensile Wire (Recommended)';
+      case '3mm':
+        return '3.0 mm High Tensile Wire (Heavy Duty)';
+      default:
+        return '$wire High Tensile Wire';
+    }
+  }
+
+  static String _getWireOptionTitle(String wire, int optionNumber) {
+    switch (wire) {
+      case '2mm':
+        return 'OPTION $optionNumber: WITH 2.0 MM';
+      case '2.5mm':
+        return 'OPTION $optionNumber: WITH 2.5 MM (REC)';
+      case '3mm':
+        return 'OPTION $optionNumber: WITH 3.0 MM';
+      default:
+        return 'OPTION $optionNumber: WITH $wire';
+    }
+  }
+
+  static pw.Widget _buildWireOptionCard({
+    required CustomerEstimate estimate,
+    required String wireThickness,
+    required int optionNumber,
+    required bool isRecommended,
+    required PdfColor primaryColor,
+    required PdfColor secondaryColor,
+    required PdfColor borderColor,
+    required PdfColor neutralBg,
+  }) {
+    final title = _getWireOptionTitle(wireThickness, optionNumber);
+    final isPrimaryHighlight = isRecommended;
+    final badgeColor = isPrimaryHighlight ? primaryColor : secondaryColor;
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        color: neutralBg,
+        border: pw.Border.all(
+          color: isPrimaryHighlight ? primaryColor : borderColor,
+          width: isPrimaryHighlight ? 1.2 : 0.8,
+        ),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+            decoration: pw.BoxDecoration(
+              color: badgeColor,
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+            ),
+            child: pw.Text(
+              title,
+              style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+            ),
+          ),
+          pw.SizedBox(height: 5),
+          _buildSummaryRow('Material & Work Subtotal', 'Rs. ${estimate.subtotal.toStringAsFixed(2)}', fontSize: 7.5),
+          if (estimate.discountAmount > 0)
+            _buildSummaryRow(
+              'Discount',
+              '- Rs. ${estimate.discountAmount.toStringAsFixed(2)}',
+              textColor: PdfColors.red700,
+              fontSize: 7.5,
+            ),
+          if (estimate.taxAmount > 0)
+            _buildSummaryRow('GST (${estimate.customer.taxRate}%)', 'Rs. ${estimate.taxAmount.toStringAsFixed(2)}', fontSize: 7.5),
+          pw.Divider(color: borderColor, thickness: 0.8),
+          _buildSummaryRow(
+            'Grand Total',
+            'Rs. ${estimate.grandTotal.toStringAsFixed(2)}',
+            isBold: true,
+            fontSize: 9.5,
+            textColor: primaryColor,
+          ),
+          if (estimate.totalSqFt > 0)
+            _buildSummaryRow(
+              'Rate / Sq. Ft',
+              'Rs. ${estimate.effectiveRatePerSqFt.toStringAsFixed(2)} / Sq.Ft',
+              isBold: true,
+              fontSize: 8,
+              textColor: isPrimaryHighlight ? primaryColor : secondaryColor,
+            ),
+          if (estimate.advancePaid > 0) ...[
+            _buildSummaryRow('Advance Paid', 'Rs. ${estimate.advancePaid.toStringAsFixed(2)}', textColor: PdfColors.green700, fontSize: 7.5),
+            _buildSummaryRow('Balance Due', 'Rs. ${estimate.balanceDue.toStringAsFixed(2)}', isBold: true, textColor: PdfColors.red800, fontSize: 8),
+          ],
         ],
       ),
     );

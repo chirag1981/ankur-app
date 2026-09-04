@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/models.dart';
+import 'pdf_invoice_generator.dart';
 import 'unit_converter.dart';
 
 class WhatsAppService {
@@ -39,34 +40,44 @@ class WhatsAppService {
     buffer.writeln('--------------------------------');
     buffer.writeln('*FINANCIAL SUMMARY:*');
 
-    if (wireOption == 'both') {
-      final est2mm = estimate.withWireThickness('2mm');
-      final est25mm = estimate.withWireThickness('2.5mm');
+    final selectedWires = PdfInvoiceGenerator.parseWireOptions(wireOption);
 
-      buffer.writeln('*OPTION 1 (with 2.0 mm SS 316 Wire):*');
-      buffer.writeln('• Subtotal: ${UnitConverter.formatCurrency(est2mm.subtotal)}');
-      if (est2mm.discountAmount > 0) {
-        buffer.writeln('• Discount: -${UnitConverter.formatCurrency(est2mm.discountAmount)}');
+    if (selectedWires.length > 1) {
+      for (int i = 0; i < selectedWires.length; i++) {
+        final w = selectedWires[i];
+        final est = estimate.withWireThickness(w);
+        final optionTitle = w == '2mm'
+            ? 'OPTION ${i + 1} (with 2.0 mm SS 316 Wire):'
+            : (w == '2.5mm'
+                ? 'OPTION ${i + 1} (with 2.5 mm SS 316 Wire - Recommended):'
+                : 'OPTION ${i + 1} (with 3.0 mm SS 316 Wire - Heavy Duty):');
+
+        if (i > 0) buffer.writeln('');
+        buffer.writeln('*$optionTitle*');
+        buffer.writeln('• Subtotal: ${UnitConverter.formatCurrency(est.subtotal)}');
+        if (est.discountAmount > 0) {
+          buffer.writeln('• Discount: -${UnitConverter.formatCurrency(est.discountAmount)}');
+        }
+        if (est.taxAmount > 0) {
+          buffer.writeln('• GST (${est.customer.taxRate}%): +${UnitConverter.formatCurrency(est.taxAmount)}');
+        }
+        buffer.writeln('• *Grand Total: ${UnitConverter.formatCurrency(est.grandTotal)}*');
+        if (est.totalSqFt > 0) {
+          buffer.writeln('• *Rate / Sq.Ft: ${UnitConverter.formatCurrency(est.effectiveRatePerSqFt)} / Sq. Ft*');
+        }
       }
-      buffer.writeln('• *Grand Total: ${UnitConverter.formatCurrency(est2mm.grandTotal)}*');
-      if (est2mm.totalSqFt > 0) {
-        buffer.writeln('• *Rate / Sq.Ft: ${UnitConverter.formatCurrency(est2mm.effectiveRatePerSqFt)} / Sq. Ft*');
-      }
-      buffer.writeln('');
-      buffer.writeln('*OPTION 2 (with 2.5 mm SS 316 Wire - Recommended):*');
-      buffer.writeln('• Subtotal: ${UnitConverter.formatCurrency(est25mm.subtotal)}');
-      if (est25mm.discountAmount > 0) {
-        buffer.writeln('• Discount: -${UnitConverter.formatCurrency(est25mm.discountAmount)}');
-      }
-      buffer.writeln('• *Grand Total: ${UnitConverter.formatCurrency(est25mm.grandTotal)}*');
-      if (est25mm.totalSqFt > 0) {
-        buffer.writeln('• *Rate / Sq.Ft: ${UnitConverter.formatCurrency(est25mm.effectiveRatePerSqFt)} / Sq. Ft*');
+      if (estimate.advancePaid > 0) {
+        buffer.writeln('');
+        buffer.writeln('• Advance Paid: ${UnitConverter.formatCurrency(estimate.advancePaid)}');
       }
     } else {
-      final effectiveEst = wireOption == '2mm'
-          ? estimate.withWireThickness('2mm')
-          : (wireOption == '2.5mm' ? estimate.withWireThickness('2.5mm') : estimate);
+      final w = selectedWires.first;
+      final effectiveEst = estimate.withWireThickness(w);
+      final wireName = w == '2mm'
+          ? '2.0 mm Wire'
+          : (w == '2.5mm' ? '2.5 mm Wire' : '3.0 mm Wire');
 
+      buffer.writeln('*Configuration: $wireName*');
       buffer.writeln('• Subtotal: ${UnitConverter.formatCurrency(effectiveEst.subtotal)}');
       if (effectiveEst.discountAmount > 0) {
         buffer.writeln('• Discount: -${UnitConverter.formatCurrency(effectiveEst.discountAmount)}');

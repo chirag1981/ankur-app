@@ -133,6 +133,17 @@ class DatabaseHelper {
           calculationType: 'fixed',
           searchPattern: '%self screw%',
         );
+
+        // Automatically ensure Wire (3mm) is available in master materials and all customers
+        await _ensureMasterAndCustomerMaterialStatic(
+          db: db,
+          name: 'Wire (3mm)',
+          category: 'Wire',
+          unit: 'Meter',
+          unitPrice: 16.0,
+          calculationType: 'per_wire_meter',
+          searchPattern: '%3mm%',
+        );
       },
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
