@@ -458,22 +458,39 @@ class PdfInvoiceGenerator {
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
-                            pw.Text(
-                              '• Quotation Validity: Valid for 15 days from generated date (${dateFormat.format(estimate.customer.createdAt)} to ${dateFormat.format(estimate.customer.createdAt.add(const Duration(days: 15)))}).',
-                              style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey900),
+                            _buildBulletItem(
+                              'Quotation Validity: Valid for 15 days from generated date (${dateFormat.format(estimate.customer.createdAt)} to ${dateFormat.format(estimate.customer.createdAt.add(const Duration(days: 15)))}).',
+                              isBold: true,
+                              bulletColor: primaryColor,
                             ),
-                            pw.Text('• Marine Grade AISI 316 Stainless Steel Wire (Rust-Free)', style: const pw.TextStyle(fontSize: 7.5)),
-                            pw.Text('• Heavy Virgin Aluminum Channel with powder coating', style: const pw.TextStyle(fontSize: 7.5)),
+                            _buildBulletItem(
+                              'Marine Grade AISI 316 Stainless Steel Wire (Rust-Free)',
+                              bulletColor: primaryColor,
+                            ),
+                            _buildBulletItem(
+                              'Heavy Virgin Aluminum Channel with powder coating',
+                              bulletColor: primaryColor,
+                            ),
                           ],
                         ),
                       ),
+                      pw.SizedBox(width: 12),
                       pw.Expanded(
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
-                            pw.Text('• High tensile strength (tested up to 400+ kg impact)', style: const pw.TextStyle(fontSize: 7.5)),
-                            pw.Text('• 5 Years Replacement Warranty on SS 316 Wire against rust', style: const pw.TextStyle(fontSize: 7.5)),
-                            pw.Text('• Professional installation by certified technicians', style: const pw.TextStyle(fontSize: 7.5)),
+                            _buildBulletItem(
+                              'High tensile strength (tested up to 400+ kg impact)',
+                              bulletColor: primaryColor,
+                            ),
+                            _buildBulletItem(
+                              '5 Years Replacement Warranty on SS 316 Wire against rust',
+                              bulletColor: primaryColor,
+                            ),
+                            _buildBulletItem(
+                              'Professional installation by certified technicians',
+                              bulletColor: primaryColor,
+                            ),
                           ],
                         ),
                       ),
@@ -583,6 +600,41 @@ class PdfInvoiceGenerator {
               fontSize: fontSize,
               fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
               color: textColor ?? PdfColors.black,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildBulletItem(
+    String text, {
+    bool isBold = false,
+    PdfColor? color,
+    PdfColor? bulletColor,
+  }) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 2.5),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            width: 3.5,
+            height: 3.5,
+            margin: const pw.EdgeInsets.only(top: 3.5, right: 5),
+            decoration: pw.BoxDecoration(
+              color: bulletColor ?? PdfColor.fromHex('#0F2744'),
+              shape: pw.BoxShape.circle,
+            ),
+          ),
+          pw.Expanded(
+            child: pw.Text(
+              text,
+              style: pw.TextStyle(
+                fontSize: 7.5,
+                fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+                color: color ?? PdfColors.blueGrey900,
+              ),
             ),
           ),
         ],
