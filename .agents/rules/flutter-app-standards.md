@@ -133,6 +133,30 @@ Every Flutter app must look visually stunning, polished, and premium. Never prod
 - Never write unhandled database operations on the main thread.
 
 ────────────────────────────────────────
+💾 Database Backup & Restore Standards (Offline-First Resiliency)
+────────────────────────────────────────
+
+For all offline-first applications with local database persistence (sqflite / Drift / SQLite):
+
+- **Database Backup (Export)**:
+  - **Flush / Checkpoint**: Flush active transactions and checkpoint WAL (`PRAGMA wal_checkpoint(FULL)`) before copying the database file.
+  - **Timestamped Snapshot**: Create a clean copy in temporary storage named with a standard timestamp: `[AppName]_Backup_YYYYMMDD_HHMMSS.db`.
+  - **Native Share Integration**: Use `share_plus` (`Share.shareXFiles`) to invoke the operating system's native share sheet, allowing users to save directly to **Google Drive** ("Save to Drive"), send via **WhatsApp**, email via Gmail, or save to device storage.
+  - **Public Downloads Option**: Provide an optional direct save into the public Downloads directory (`/storage/emulated/0/Download` on Android).
+
+- **Database Restore (Import)**:
+  - **Native File Picker (Avoid Fragile External Plugins)**: Use a lightweight native Android `MethodChannel` (`Intent.ACTION_OPEN_DOCUMENT`) in `MainActivity.kt` to avoid third-party Gradle/Kotlin version mismatches (e.g. AGP `compileSdk` / AAR metadata incompatibilities).
+  - **Validation Guard**: Open the selected backup file in read-only mode and verify that essential SQLite tables exist in `sqlite_master` before touching the active database. Reject corrupted or incompatible files with an informative error dialog.
+  - **Atomic Replacement**:
+    1. Close the active database connection.
+    2. Remove any leftover temporary `-wal` and `-shm` files.
+    3. Copy the verified backup file over the active database file.
+    4. Re-open the database connection cleanly.
+  - **Reactive State Refresh**: Automatically invalidate/refresh all state providers (Riverpod `ref.invalidate` or BLoC reload events) immediately after restore so the UI reflects the restored data without requiring an app restart.
+  - **User Confirmation & Feedback**: Always prompt a confirmation dialog before overwriting data, show a progress indicator during the restore, and display a summary of restored records upon completion.
+
+
+────────────────────────────────────────
 🔤 Text Casing & Normalization Standards
 ────────────────────────────────────────
 

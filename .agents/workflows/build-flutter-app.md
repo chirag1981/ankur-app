@@ -126,6 +126,18 @@ Implement:
 - Secure storage (`flutter_secure_storage`) for sensitive credentials.
 - Unit tests for local database operations and repository mappings.
 
+### Database Backup & Restore Standard (Offline-First Resiliency)
+- **Export / Backup**:
+  - Checkpoint WAL (`PRAGMA wal_checkpoint(FULL)`).
+  - Snapshot active database into `[AppName]_Backup_YYYYMMDD_HHMMSS.db`.
+  - Native Share Sheet (`share_plus`) integration for 1-tap sharing to Google Drive, WhatsApp, Email, or local storage.
+  - Optional direct copy to public `/storage/emulated/0/Download`.
+- **Import / Restore**:
+  - Use native Android `MethodChannel` (`Intent.ACTION_OPEN_DOCUMENT`) in `MainActivity.kt` to avoid third-party plugin/Gradle version mismatches.
+  - Pre-restore validation: verify required SQLite tables exist before touching active data.
+  - Atomic swap: close active DB, clean temporary `-wal`/`-shm` files, overwrite, and re-open.
+  - State refresh: immediately invalidate Riverpod/BLoC state caches to reflect restored records without restarting the app.
+
 ---
 
 # Phase 5. Domain & State Management Development
@@ -241,6 +253,7 @@ Update `README.md`:
 ✓ Unit and widget tests pass (`flutter test`)
 ✓ Security checklist (Phase 5A) passed with zero open issues
 ✓ Bug-Fix Loop (Phase 8A) converged
+✓ Database Backup & Restore verified (Export to Google Drive/WhatsApp & safe restore with table validation and UI cache refresh)
 ✓ Android v1 & v2 signing verified for sideloading
 
 ---
