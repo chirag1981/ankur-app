@@ -745,7 +745,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Total (Materials, Hardware, Labor & Transport):',
+                    'Total :',
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
                   ),
                   Text(
@@ -764,7 +764,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Rate Per Sq. Ft (Total ÷ Sq.Ft):',
+                      'Rate Per Sq. Ft :',
                       style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textMuted),
                     ),
                     Text(

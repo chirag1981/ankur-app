@@ -136,134 +136,127 @@ class PdfInvoiceGenerator {
           return [
             // Customer Details Section
             pw.Container(
+              width: double.infinity,
               padding: const pw.EdgeInsets.all(10),
               decoration: pw.BoxDecoration(
                 color: neutralBg,
                 borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
                 border: pw.Border.all(color: borderColor, width: 0.8),
               ),
-              child: pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Expanded(
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text(
-                          'CUSTOMER DETAILS:',
-                          style: pw.TextStyle(
-                            fontSize: 8.5,
-                            fontWeight: pw.FontWeight.bold,
-                            color: secondaryColor,
-                          ),
-                        ),
-                        pw.SizedBox(height: 3),
-                        pw.Text(
-                          estimate.customer.name.toUpperCase(),
-                          style: pw.TextStyle(
-                            fontSize: 12,
-                            fontWeight: pw.FontWeight.bold,
-                            color: primaryColor,
-                          ),
-                        ),
-                        if (estimate.customer.phone.isNotEmpty)
-                          pw.Text(
-                            'Contact: ${estimate.customer.phone}',
-                            style: const pw.TextStyle(fontSize: 9.5),
-                          ),
-                        if (estimate.customer.address.isNotEmpty)
-                          pw.Text(
-                            'Site Address: ${estimate.customer.address}',
-                            style: const pw.TextStyle(fontSize: 9),
-                          ),
-                      ],
+                  pw.Text(
+                    'CUSTOMER DETAILS:',
+                    style: pw.TextStyle(
+                      fontSize: 8.5,
+                      fontWeight: pw.FontWeight.bold,
+                      color: secondaryColor,
                     ),
                   ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.all(8),
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: borderColor),
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-                      color: PdfColors.white,
-                    ),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('Total Rooms: ${estimate.totalRoomsCount}', style: const pw.TextStyle(fontSize: 9)),
-                        pw.Text(
-                          'Total Windows: ${estimate.totalWindowsCount} Units',
-                          style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: primaryColor),
-                        ),
-                      ],
+                  pw.SizedBox(height: 3),
+                  pw.Text(
+                    estimate.customer.name.toUpperCase(),
+                    style: pw.TextStyle(
+                      fontSize: 12,
+                      fontWeight: pw.FontWeight.bold,
+                      color: primaryColor,
                     ),
                   ),
+                  if (estimate.customer.phone.isNotEmpty)
+                    pw.Text(
+                      'Contact: ${estimate.customer.phone}',
+                      style: const pw.TextStyle(fontSize: 9.5),
+                    ),
+                  if (estimate.customer.address.isNotEmpty)
+                    pw.Text(
+                      'Site Address: ${estimate.customer.address}',
+                      style: const pw.TextStyle(fontSize: 9),
+                    ),
                 ],
               ),
             ),
             pw.SizedBox(height: 14),
 
-            // Section 1: Windows Measurement & Area Schedule (Only Window and Count, clean format)
+            // Section 1: Windows Measurement & Area Schedule
             pw.Text(
               '1. WINDOWS MEASUREMENT & AREA SCHEDULE',
               style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: primaryColor),
             ),
             pw.SizedBox(height: 6),
 
-            pw.Table(
-              border: pw.TableBorder.all(color: borderColor, width: 0.5),
-              columnWidths: const {
-                0: pw.FlexColumnWidth(0.8), // Sr.
-                1: pw.FlexColumnWidth(3.0), // Room / Location
-                2: pw.FlexColumnWidth(3.5), // Window
-                3: pw.FlexColumnWidth(1.5), // Count
-              },
-              children: [
-                // Header Row
-                pw.TableRow(
-                  decoration: pw.BoxDecoration(color: primaryColor),
-                  children: [
-                    _buildCell('Sr.', isHeader: true, align: pw.TextAlign.center),
-                    _buildCell('Room / Location', isHeader: true),
-                    _buildCell('Window', isHeader: true),
-                    _buildCell('Count (Units)', isHeader: true, align: pw.TextAlign.center),
-                  ],
-                ),
-                // Data Rows
-                ...(() {
-                  int srNo = 1;
-                  final rows = <pw.TableRow>[];
-                  for (final room in estimate.rooms) {
-                    final winList = estimate.windowsByRoom[room.id] ?? [];
-                    for (final win in winList) {
-                      rows.add(
-                        pw.TableRow(
-                          decoration: const pw.BoxDecoration(color: PdfColors.white),
-                          children: [
-                            _buildCell('$srNo', align: pw.TextAlign.center),
-                            _buildCell(room.name),
-                            _buildCell(win.label), // Excludes (3-Track Sliding)
-                            _buildCell('${win.quantity} Unit${win.quantity > 1 ? "s" : ""}', align: pw.TextAlign.center),
-                          ],
-                        ),
-                      );
-                      srNo++;
+            (() {
+              final targetEst = wireOption == '2mm' ? est2mm : est25mm;
+              final defaultRate = targetEst.totalSqFt > 0 ? (targetEst.subtotal / targetEst.totalSqFt) : 0.0;
+              double totalAmountSum = 0.0;
+
+              return pw.Table(
+                border: pw.TableBorder.all(color: borderColor, width: 0.5),
+                columnWidths: const {
+                  0: pw.FlexColumnWidth(0.7), // Sr.
+                  1: pw.FlexColumnWidth(2.6), // Room / Location
+                  2: pw.FlexColumnWidth(2.6), // Window
+                  3: pw.FlexColumnWidth(1.7), // Total Sq. Ft
+                  4: pw.FlexColumnWidth(1.7), // Rate / Sq. Ft
+                  5: pw.FlexColumnWidth(2.0), // Total Amount
+                },
+                children: [
+                  // Header Row
+                  pw.TableRow(
+                    decoration: pw.BoxDecoration(color: primaryColor),
+                    children: [
+                      _buildCell('Sr.', isHeader: true, align: pw.TextAlign.center),
+                      _buildCell('Room / Location', isHeader: true),
+                      _buildCell('Window', isHeader: true),
+                      _buildCell('Total Sq. Ft', isHeader: true, align: pw.TextAlign.right),
+                      _buildCell('Rate / Sq. Ft', isHeader: true, align: pw.TextAlign.right),
+                      _buildCell('Total Amount', isHeader: true, align: pw.TextAlign.right),
+                    ],
+                  ),
+                  // Data Rows
+                  ...(() {
+                    int srNo = 1;
+                    final rows = <pw.TableRow>[];
+                    for (final room in estimate.rooms) {
+                      final winList = estimate.windowsByRoom[room.id] ?? [];
+                      for (final win in winList) {
+                        final winRate = win.ratePerSqFt > 0 ? win.ratePerSqFt : defaultRate;
+                        final winAmount = win.totalSqFt * winRate;
+                        totalAmountSum += winAmount;
+
+                        rows.add(
+                          pw.TableRow(
+                            decoration: const pw.BoxDecoration(color: PdfColors.white),
+                            children: [
+                              _buildCell('$srNo', align: pw.TextAlign.center),
+                              _buildCell(room.name),
+                              _buildCell(win.label),
+                              _buildCell('${win.totalSqFt.toStringAsFixed(2)} Sq.Ft', align: pw.TextAlign.right),
+                              _buildCell('Rs. ${winRate.toStringAsFixed(2)}', align: pw.TextAlign.right),
+                              _buildCell('Rs. ${winAmount.toStringAsFixed(2)}', align: pw.TextAlign.right),
+                            ],
+                          ),
+                        );
+                        srNo++;
+                      }
                     }
-                  }
-                  return rows;
-                })(),
-                // Schedule Total Row
-                pw.TableRow(
-                  decoration: pw.BoxDecoration(color: neutralBg),
-                  children: [
-                    _buildCell('TOTAL', isHeader: true, color: PdfColors.black, align: pw.TextAlign.center),
-                    _buildCell('${estimate.totalRoomsCount} Rooms', isHeader: true, color: PdfColors.black),
-                    _buildCell('Total Windows', isHeader: true, color: PdfColors.black),
-                    _buildCell('${estimate.totalWindowsCount} Units', isHeader: true, color: primaryColor, align: pw.TextAlign.center),
-                  ],
-                ),
-              ],
-            ),
+                    return rows;
+                  })(),
+                  // Schedule Total Row
+                  pw.TableRow(
+                    decoration: pw.BoxDecoration(color: neutralBg),
+                    children: [
+                      _buildCell('TOTAL', isHeader: true, color: PdfColors.black, align: pw.TextAlign.center),
+                      _buildCell('${estimate.totalRoomsCount} Rooms', isHeader: true, color: PdfColors.black),
+                      _buildCell('${estimate.totalWindowsCount} Windows', isHeader: true, color: PdfColors.black),
+                      _buildCell('${estimate.totalSqFt.toStringAsFixed(2)} Sq.Ft', isHeader: true, color: primaryColor, align: pw.TextAlign.right),
+                      _buildCell(defaultRate > 0 ? 'Rs. ${defaultRate.toStringAsFixed(2)}' : '-', isHeader: true, color: primaryColor, align: pw.TextAlign.right),
+                      _buildCell('Rs. ${totalAmountSum.toStringAsFixed(2)}', isHeader: true, color: primaryColor, align: pw.TextAlign.right),
+                    ],
+                  ),
+                ],
+              );
+            })(),
             pw.SizedBox(height: 16),
 
             // Section 2: Financial Summary & Quotation Options
