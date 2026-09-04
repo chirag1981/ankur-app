@@ -35,6 +35,7 @@ SECURITY_REPORT.md
 **/android/local.properties
 **/android/GeneratedPluginRegistrant.java
 **/android/.kotlin/
+**/android/build/
 
 # iOS related
 **/ios/**/*.mode1v3

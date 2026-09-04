@@ -1,4 +1,4 @@
-import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -119,17 +119,15 @@ class _BackupRestoreDialogState extends ConsumerState<BackupRestoreDialog> {
   // IMPORT & RESTORE
   Future<void> _importAndRestore() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
-        allowMultiple: false,
-      );
+      const channel = MethodChannel('com.invisiblegrills.app/file_picker');
+      final result = await channel.invokeMapMethod<String, String>('pickBackupFile');
 
-      if (result == null || result.files.single.path == null) {
+      if (result == null || result['path'] == null) {
         return; // User cancelled
       }
 
-      final selectedPath = result.files.single.path!;
-      final fileName = result.files.single.name;
+      final selectedPath = result['path']!;
+      final fileName = result['name'] ?? 'backup.db';
 
       if (!mounted) return;
 
