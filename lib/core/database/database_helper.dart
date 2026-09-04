@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 9,
+      version: 10,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
       onOpen: (db) async {
@@ -98,47 +98,38 @@ class DatabaseHelper {
           WHERE LOWER(name) LIKE '%chokdi%' AND (calculation_type = 'per_window' OR calculation_type = 'per_sq_ft')
         ''');
 
-        // Automatically ensure Transport is available in master materials
-        final masterTransport = await db.query(
-          'materials',
-          where: 'customer_id IS NULL AND LOWER(name) LIKE ?',
-          whereArgs: ['%transport%'],
+        // Automatically ensure Transport is available in master materials and all customers
+        await _ensureMasterAndCustomerMaterialStatic(
+          db: db,
+          name: 'Transport',
+          category: 'Transport',
+          unit: 'Trip',
+          unitPrice: 0.0,
+          calculationType: 'fixed',
+          searchPattern: '%transport%',
         );
-        if (masterTransport.isEmpty) {
-          await db.insert('materials', {
-            'customer_id': null,
-            'name': 'Transport',
-            'category': 'Transport',
-            'unit': 'Trip',
-            'unit_price': 0.0,
-            'calculation_type': 'fixed',
-            'multiplier': 1.0,
-            'manual_quantity': 1.0,
-            'is_enabled': 1,
-          });
-        }
 
-        // Automatically ensure every customer has a Transport item
-        final customersWithoutTransport = await db.rawQuery('''
-          SELECT id FROM customers 
-          WHERE id NOT IN (
-            SELECT customer_id FROM materials WHERE customer_id IS NOT NULL AND LOWER(name) LIKE '%transport%'
-          )
-        ''');
-        for (final row in customersWithoutTransport) {
-          final custId = row['id'] as int;
-          await db.insert('materials', {
-            'customer_id': custId,
-            'name': 'Transport',
-            'category': 'Transport',
-            'unit': 'Trip',
-            'unit_price': 0.0,
-            'calculation_type': 'fixed',
-            'multiplier': 1.0,
-            'manual_quantity': 1.0,
-            'is_enabled': 1,
-          });
-        }
+        // Automatically ensure Round Hook is available in master materials and all customers
+        await _ensureMasterAndCustomerMaterialStatic(
+          db: db,
+          name: 'Round Hook',
+          category: 'Hardware',
+          unit: 'Pcs',
+          unitPrice: 0.0,
+          calculationType: 'fixed',
+          searchPattern: '%round hook%',
+        );
+
+        // Automatically ensure Self Screw is available in master materials and all customers
+        await _ensureMasterAndCustomerMaterialStatic(
+          db: db,
+          name: 'Self Screw',
+          category: 'Hardware',
+          unit: 'Pcs',
+          unitPrice: 0.0,
+          calculationType: 'fixed',
+          searchPattern: '%self screw%',
+        );
       },
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
@@ -332,6 +323,79 @@ class DatabaseHelper {
         });
       }
     }
+    if (oldVersion < 10) {
+      await _ensureMasterAndCustomerMaterialStatic(
+        db: db,
+        name: 'Round Hook',
+        category: 'Hardware',
+        unit: 'Pcs',
+        unitPrice: 0.0,
+        calculationType: 'fixed',
+        searchPattern: '%round hook%',
+      );
+      await _ensureMasterAndCustomerMaterialStatic(
+        db: db,
+        name: 'Self Screw',
+        category: 'Hardware',
+        unit: 'Pcs',
+        unitPrice: 0.0,
+        calculationType: 'fixed',
+        searchPattern: '%self screw%',
+      );
+    }
+  }
+
+  static Future<void> _ensureMasterAndCustomerMaterialStatic({
+    required Database db,
+    required String name,
+    required String category,
+    required String unit,
+    required double unitPrice,
+    required String calculationType,
+    required String searchPattern,
+  }) async {
+    // 1. Ensure master material exists
+    final master = await db.query(
+      'materials',
+      where: 'customer_id IS NULL AND LOWER(name) LIKE ?',
+      whereArgs: [searchPattern],
+    );
+    if (master.isEmpty) {
+      await db.insert('materials', {
+        'customer_id': null,
+        'name': name,
+        'category': category,
+        'unit': unit,
+        'unit_price': unitPrice,
+        'calculation_type': calculationType,
+        'multiplier': 1.0,
+        'manual_quantity': 1.0,
+        'is_enabled': 1,
+      });
+    }
+
+    // 2. Ensure every existing customer has this material
+    final missingCustomers = await db.rawQuery('''
+      SELECT id FROM customers 
+      WHERE id NOT IN (
+        SELECT customer_id FROM materials WHERE customer_id IS NOT NULL AND LOWER(name) LIKE ?
+      )
+    ''', [searchPattern]);
+
+    for (final row in missingCustomers) {
+      final custId = row['id'] as int;
+      await db.insert('materials', {
+        'customer_id': custId,
+        'name': name,
+        'category': category,
+        'unit': unit,
+        'unit_price': unitPrice,
+        'calculation_type': calculationType,
+        'multiplier': 1.0,
+        'manual_quantity': 1.0,
+        'is_enabled': 1,
+      });
+    }
   }
 
   Future<void> _seedDefaultMasterMaterials(Database db) async {
@@ -398,6 +462,28 @@ class DatabaseHelper {
         'unit': 'Pcs',
         'unit_price': 2.0,
         'calculation_type': 'per_channel_chokdi',
+        'multiplier': 1.0,
+        'manual_quantity': 1.0,
+        'is_enabled': 1,
+      },
+      {
+        'customer_id': null,
+        'name': 'Round Hook',
+        'category': 'Hardware',
+        'unit': 'Pcs',
+        'unit_price': 0.0,
+        'calculation_type': 'fixed',
+        'multiplier': 1.0,
+        'manual_quantity': 1.0,
+        'is_enabled': 1,
+      },
+      {
+        'customer_id': null,
+        'name': 'Self Screw',
+        'category': 'Hardware',
+        'unit': 'Pcs',
+        'unit_price': 0.0,
+        'calculation_type': 'fixed',
         'multiplier': 1.0,
         'manual_quantity': 1.0,
         'is_enabled': 1,

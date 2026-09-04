@@ -89,6 +89,8 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
         _unit = 'Sq. Ft';
       } else if (type == 'per_window') {
         _unit = 'Per Window';
+      } else if (type == 'fixed') {
+        _unit = _category == 'Transport' ? 'Trip' : (_category == 'Hardware' ? 'Pcs' : 'Fixed');
       } else {
         _unit = 'Units / Set';
       }
@@ -227,6 +229,18 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                           _calculationType = 'fixed';
                           _unit = 'Trip';
                         });
+                      } else if (lower.contains('round hook')) {
+                        setState(() {
+                          _category = 'Hardware';
+                          _calculationType = 'fixed';
+                          _unit = 'Pcs';
+                        });
+                      } else if (lower.contains('self screw')) {
+                        setState(() {
+                          _category = 'Hardware';
+                          _calculationType = 'fixed';
+                          _unit = 'Pcs';
+                        });
                       }
                     }
                   },
@@ -363,11 +377,14 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                 const SizedBox(height: 6),
                 Builder(
                   builder: (context) {
-                    final isTransport = _category == 'Transport' ||
+                    final isManualFixed = _calculationType == 'fixed' ||
+                        _category == 'Transport' ||
                         _nameController.text.trim().toLowerCase().contains('transport') ||
-                        _calculationType == 'fixed';
+                        _nameController.text.trim().toLowerCase().contains('round hook') ||
+                        _nameController.text.trim().toLowerCase().contains('self screw');
 
-                    if (isTransport) {
+                    if (isManualFixed) {
+                      final itemName = _nameController.text.trim().isNotEmpty ? _nameController.text.trim() : 'This item';
                       return Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -376,13 +393,19 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
                           border: Border.all(color: AppColors.primary.withOpacity(0.2)),
                         ),
                         child: Row(
-                          children: const [
-                            Icon(Icons.local_shipping_outlined, color: AppColors.primary, size: 22),
-                            SizedBox(width: 10),
+                          children: [
+                            Icon(
+                              itemName.toLowerCase().contains('transport')
+                                  ? Icons.local_shipping_outlined
+                                  : Icons.handyman_outlined,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                'Transport is entered as a manual rate (₹) and added directly to the total.',
-                                style: TextStyle(fontSize: 12.5, color: AppColors.textDark, fontWeight: FontWeight.w500),
+                                '$itemName is entered as a manual rate (₹) and added directly to the total.',
+                                style: const TextStyle(fontSize: 12.5, color: AppColors.textDark, fontWeight: FontWeight.w500),
                               ),
                             ),
                           ],

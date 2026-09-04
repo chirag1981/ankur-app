@@ -362,5 +362,48 @@ void main() {
       expect(estimate.grandTotal, equals(5500.0));
       expect(estimate.effectiveRatePerSqFt, equals(55.0)); // 5500 / 100 = 55 Rs/sq.ft
     });
+
+    test('Round Hook and Self Screw calculate with manual rate like Transport', () {
+      final roundHook = MaterialItem(
+        name: 'Round Hook',
+        category: 'Hardware',
+        unit: 'Pcs',
+        unitPrice: 250.0,
+        calculationType: 'fixed',
+      );
+      final selfScrew = MaterialItem(
+        name: 'Self Screw',
+        category: 'Hardware',
+        unit: 'Pcs',
+        unitPrice: 150.0,
+        calculationType: 'fixed',
+      );
+      final transport = MaterialItem(
+        name: 'Transport',
+        category: 'Transport',
+        unit: 'Trip',
+        unitPrice: 500.0,
+        calculationType: 'fixed',
+      );
+
+      expect(roundHook.calculationType, equals('fixed'));
+      expect(selfScrew.calculationType, equals('fixed'));
+      expect(transport.calculationType, equals('fixed'));
+
+      expect(roundHook.getTotalCost(totalSqFt: 100.0, totalWindows: 4), equals(250.0));
+      expect(selfScrew.getTotalCost(totalSqFt: 100.0, totalWindows: 4), equals(150.0));
+      expect(transport.getTotalCost(totalSqFt: 100.0, totalWindows: 4), equals(500.0));
+
+      final customer = Customer(name: 'Test Hardware', phone: '9999999999');
+      final estimate = CustomerEstimate(
+        customer: customer,
+        rooms: [],
+        windowsByRoom: {},
+        materials: [roundHook, selfScrew, transport],
+      );
+
+      expect(estimate.materialsCost, equals(900.0)); // 250 + 150 + 500
+      expect(estimate.baseCost, equals(900.0));
+    });
   });
 }

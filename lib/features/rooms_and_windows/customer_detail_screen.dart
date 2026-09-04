@@ -623,92 +623,105 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
               ),
             ),
             color: mat.isEnabled ? Colors.white : Colors.grey.shade50,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Row(
-                children: [
-                  Checkbox(
-                    value: mat.isEnabled,
-                    activeColor: AppColors.accent,
-                    onChanged: (val) {
-                      controller.updateMaterial(mat.copyWith(isEnabled: val ?? false));
-                    },
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (_) => MaterialFormDialog(
+                    customerId: estimate.customer.id,
+                    initialMaterial: mat,
+                    onSave: (updated) => controller.updateMaterial(updated),
                   ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                mat.name,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: mat.isEnabled ? AppColors.textDark : AppColors.textMuted,
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  children: [
+                    Checkbox(
+                      value: mat.isEnabled,
+                      activeColor: AppColors.accent,
+                      onChanged: (val) {
+                        controller.updateMaterial(mat.copyWith(isEnabled: val ?? false));
+                      },
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  mat.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: mat.isEnabled ? AppColors.textDark : AppColors.textMuted,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          '${mat.category} • Rate: ${UnitConverter.formatCurrency(mat.unitPrice)} / ${mat.unit}',
-                          style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          mat.calculationType == 'per_channel_chokdi'
-                              ? 'Calculated: ${effectiveQty.toInt()} Pcs (${estimate.totalChannelsUsed} channels × 60 chokdi)'
-                              : mat.calculationType == 'per_channel_bolts'
-                                  ? 'Calculated: ${effectiveQty.toInt()} Pcs (${estimate.totalChannelsUsed} channels × 12 bolts)'
-                                  : mat.calculationType == 'per_ft'
-                                      ? 'Calculated: ${effectiveQty.toStringAsFixed(1)} Ft (${(effectiveQty / 10).toStringAsFixed(1)} × 10ft channels)'
-                                      : mat.calculationType == 'per_wire_meter'
-                                          ? 'Calculated: ${effectiveQty.toStringAsFixed(1)} Meters (Sq.Ft × 2.7m)'
-                                          : mat.calculationType == 'fixed'
-                                              ? 'Manual Rate: ${UnitConverter.formatCurrency(mat.unitPrice)}'
-                                              : 'Calculated Qty: ${effectiveQty.toStringAsFixed(2)} ${mat.unit}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: mat.isEnabled ? AppColors.accent : Colors.grey,
+                            ],
                           ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '${mat.category} • Rate: ${UnitConverter.formatCurrency(mat.unitPrice)} / ${mat.unit}',
+                            style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            mat.calculationType == 'per_channel_chokdi'
+                                ? 'Calculated: ${effectiveQty.toInt()} Pcs (${estimate.totalChannelsUsed} channels × 60 chokdi)'
+                                : mat.calculationType == 'per_channel_bolts'
+                                    ? 'Calculated: ${effectiveQty.toInt()} Pcs (${estimate.totalChannelsUsed} channels × 12 bolts)'
+                                    : mat.calculationType == 'per_ft'
+                                        ? 'Calculated: ${effectiveQty.toStringAsFixed(1)} Ft (${(effectiveQty / 10).toStringAsFixed(1)} × 10ft channels)'
+                                        : mat.calculationType == 'per_wire_meter'
+                                            ? 'Calculated: ${effectiveQty.toStringAsFixed(1)} Meters (Sq.Ft × 2.7m)'
+                                            : mat.calculationType == 'fixed'
+                                                ? 'Manual Rate: ${UnitConverter.formatCurrency(mat.unitPrice)} (Tap to edit)'
+                                                : 'Calculated Qty: ${effectiveQty.toStringAsFixed(2)} ${mat.unit}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: mat.isEnabled ? AppColors.accent : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          UnitConverter.formatCurrency(lineCost),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: mat.isEnabled ? AppColors.primary : Colors.grey,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          constraints: const BoxConstraints(),
+                          padding: const EdgeInsets.all(4),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (_) => MaterialFormDialog(
+                                customerId: estimate.customer.id,
+                                initialMaterial: mat,
+                                onSave: (updated) => controller.updateMaterial(updated),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        UnitConverter.formatCurrency(lineCost),
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: mat.isEnabled ? AppColors.primary : Colors.grey,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 18),
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.all(4),
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (_) => MaterialFormDialog(
-                              customerId: estimate.customer.id,
-                              initialMaterial: mat,
-                              onSave: (updated) => controller.updateMaterial(updated),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
@@ -730,7 +743,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Total (Materials, Labor & Transport):',
+                    'Total (Materials, Hardware, Labor & Transport):',
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
                   ),
                   Text(

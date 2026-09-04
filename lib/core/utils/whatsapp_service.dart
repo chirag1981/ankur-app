@@ -85,6 +85,9 @@ class WhatsAppService {
     }
 
     buffer.writeln('--------------------------------');
+    final validDate = estimate.customer.createdAt.add(const Duration(days: 15));
+    final validStr = '${validDate.day.toString().padLeft(2, '0')}/${validDate.month.toString().padLeft(2, '0')}/${validDate.year}';
+    buffer.writeln('⏳ *Quotation Validity:* 15 days (Valid till $validStr)');
     if (company.phone.isNotEmpty) buffer.writeln('📞 Contact: ${company.phone}');
     if (company.instagramId.isNotEmpty) buffer.writeln('📸 Instagram: ${company.instagramId}');
     if (company.facebookId.isNotEmpty) buffer.writeln('🌐 Facebook: ${company.facebookId}');

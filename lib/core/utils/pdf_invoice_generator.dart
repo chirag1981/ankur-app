@@ -456,7 +456,7 @@ class PdfInvoiceGenerator {
             ],
             pw.SizedBox(height: 16),
 
-            // Section 3: Technical Specifications & Highlights
+            // Section 3: Terms & Conditions and Specifications
             pw.Container(
               padding: const pw.EdgeInsets.all(10),
               decoration: pw.BoxDecoration(
@@ -468,7 +468,7 @@ class PdfInvoiceGenerator {
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   pw.Text(
-                    'SPECIFICATIONS & QUALITY ASSURANCE:',
+                    'TERMS & CONDITIONS:',
                     style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: primaryColor),
                   ),
                   pw.SizedBox(height: 4),
@@ -479,9 +479,12 @@ class PdfInvoiceGenerator {
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
+                            pw.Text(
+                              '• Quotation Validity: Valid for 15 days from generated date (${dateFormat.format(estimate.customer.createdAt)} to ${dateFormat.format(estimate.customer.createdAt.add(const Duration(days: 15)))}).',
+                              style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey900),
+                            ),
                             pw.Text('• Marine Grade AISI 316 Stainless Steel Wire (Rust-Free)', style: const pw.TextStyle(fontSize: 7.5)),
                             pw.Text('• Heavy Virgin Aluminum Channel with powder coating', style: const pw.TextStyle(fontSize: 7.5)),
-                            pw.Text('• Unobstructed view with maximum balcony & window safety', style: const pw.TextStyle(fontSize: 7.5)),
                           ],
                         ),
                       ),
