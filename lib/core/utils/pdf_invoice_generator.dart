@@ -188,7 +188,6 @@ class PdfInvoiceGenerator {
             (() {
               final targetEst = wireOption == '2mm' ? est2mm : est25mm;
               final defaultRate = targetEst.totalSqFt > 0 ? (targetEst.subtotal / targetEst.totalSqFt) : 0.0;
-              double totalAmountSum = 0.0;
 
               return pw.Table(
                 border: pw.TableBorder.all(color: borderColor, width: 0.5),
@@ -222,7 +221,6 @@ class PdfInvoiceGenerator {
                       for (final win in winList) {
                         final winRate = win.ratePerSqFt > 0 ? win.ratePerSqFt : defaultRate;
                         final winAmount = win.totalSqFt * winRate;
-                        totalAmountSum += winAmount;
 
                         rows.add(
                           pw.TableRow(
@@ -242,18 +240,6 @@ class PdfInvoiceGenerator {
                     }
                     return rows;
                   })(),
-                  // Schedule Total Row
-                  pw.TableRow(
-                    decoration: pw.BoxDecoration(color: neutralBg),
-                    children: [
-                      _buildCell('TOTAL', isHeader: true, color: PdfColors.black, align: pw.TextAlign.center),
-                      _buildCell('${estimate.totalRoomsCount} Rooms', isHeader: true, color: PdfColors.black),
-                      _buildCell('${estimate.totalWindowsCount} Windows', isHeader: true, color: PdfColors.black),
-                      _buildCell('${estimate.totalSqFt.toStringAsFixed(2)} Sq.Ft', isHeader: true, color: primaryColor, align: pw.TextAlign.right),
-                      _buildCell(defaultRate > 0 ? 'Rs. ${defaultRate.toStringAsFixed(2)}' : '-', isHeader: true, color: primaryColor, align: pw.TextAlign.right),
-                      _buildCell('Rs. ${totalAmountSum.toStringAsFixed(2)}', isHeader: true, color: primaryColor, align: pw.TextAlign.right),
-                    ],
-                  ),
                 ],
               );
             })(),
